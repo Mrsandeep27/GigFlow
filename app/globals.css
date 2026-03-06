@@ -1,10 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap');
+
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Professional Navy-Indigo palette */
+  /* Core palette — Professional Navy-Indigo */
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.13 0.025 264);
   --card: oklch(1 0 0);
@@ -38,6 +40,13 @@
   --sidebar-accent-foreground: oklch(0.13 0.025 264);
   --sidebar-border: oklch(0.90 0.01 260);
   --sidebar-ring: oklch(0.44 0.18 264);
+
+  /* Extended design tokens */
+  --gold: oklch(0.78 0.14 85);
+  --gold-muted: oklch(0.68 0.10 85);
+  --gold-dim: oklch(0.55 0.09 85);
+  --hero-bg: oklch(0.10 0.025 264);
+  --hero-surface: oklch(0.14 0.03 264);
 }
 
 .dark {
@@ -76,7 +85,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback', 'Inter', system-ui, sans-serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Instrument Serif', 'Georgia', serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -114,6 +124,12 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* Extended tokens */
+  --color-gold: var(--gold);
+  --color-gold-muted: var(--gold-muted);
+  --color-gold-dim: var(--gold-dim);
+  --color-hero-bg: var(--hero-bg);
+  --color-hero-surface: var(--hero-surface);
 }
 
 @layer base {
@@ -122,11 +138,67 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "kern" 1, "liga" 1;
+    font-feature-settings: "kern" 1, "liga" 1, "cv11" 1;
     letter-spacing: -0.01em;
   }
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.025em;
+    letter-spacing: -0.03em;
     font-weight: 700;
   }
 }
+
+/* ─── Animations ───────────────────────────────────────────── */
+
+@keyframes gigFadeInUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gigFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes gigFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-18px); }
+}
+
+@keyframes gigFloatAlt {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  40%       { transform: translateY(-12px) rotate(3deg); }
+  70%       { transform: translateY(6px) rotate(-2deg); }
+}
+
+@keyframes gigPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.gig-fade-in-up {
+  animation: gigFadeInUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gig-fade-in {
+  animation: gigFadeIn 0.5s ease-out both;
+}
+
+.gig-float {
+  animation: gigFloat 7s ease-in-out infinite;
+}
+
+.gig-float-alt {
+  animation: gigFloatAlt 9s ease-in-out infinite;
+}
+
+.gig-pulse {
+  animation: gigPulse 2.5s ease-in-out infinite;
+}
+
+/* Stagger delays */
+.gig-delay-100 { animation-delay: 100ms; }
+.gig-delay-200 { animation-delay: 200ms; }
+.gig-delay-300 { animation-delay: 300ms; }
+.gig-delay-400 { animation-delay: 400ms; }
+.gig-delay-500 { animation-delay: 500ms; }
+.gig-delay-600 { animation-delay: 600ms; }
