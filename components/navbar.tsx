@@ -32,12 +32,21 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/jobs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Find Work
-            </Link>
-            <Link href="/freelancers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Find Talent
-            </Link>
+            {(!user || user.role === 'worker') && (
+              <Link href="/jobs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Find Work
+              </Link>
+            )}
+            {(!user || user.role === 'employer') && (
+              <Link href="/freelancers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Find Talent
+              </Link>
+            )}
+            {user?.role === 'employer' && (
+              <Link href="/jobs/post" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Post a Job
+              </Link>
+            )}
           </div>
 
           {/* Desktop Auth */}
@@ -100,12 +109,21 @@ export default function Navbar() {
         {/* Mobile menu */}
         {isOpen && (
           <div className="md:hidden border-t border-border py-3 space-y-1">
-            <Link href="/jobs" className="block px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-md transition-colors" onClick={() => setIsOpen(false)}>
-              Find Work
-            </Link>
-            <Link href="/freelancers" className="block px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-md transition-colors" onClick={() => setIsOpen(false)}>
-              Find Talent
-            </Link>
+            {(!user || user.role === 'worker') && (
+              <Link href="/jobs" className="block px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-md transition-colors" onClick={() => setIsOpen(false)}>
+                Find Work
+              </Link>
+            )}
+            {(!user || user.role === 'employer') && (
+              <Link href="/freelancers" className="block px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-md transition-colors" onClick={() => setIsOpen(false)}>
+                Find Talent
+              </Link>
+            )}
+            {user?.role === 'employer' && (
+              <Link href="/jobs/post" className="block px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-md transition-colors" onClick={() => setIsOpen(false)}>
+                Post a Job
+              </Link>
+            )}
             <div className="flex gap-2 pt-3 pb-1 px-1">
               {user ? (
                 <>
