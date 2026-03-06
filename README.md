@@ -1,42 +1,30 @@
 # GigFlow
 
-## Overview
-GigFlow is a Next.js application built with a modern tech stack, designed for performance and scalability.
+A Next.js application built for performance and scalability, featuring data visualization, form handling, and a polished UI.
 
 ## Tech Stack
-- **Framework**: [Next.js](https://nextjs.org/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **UI Components**: [Radix UI](https://www.radix-ui.com/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Charts**: [Recharts](https://recharts.org/)
-- **Form Handling**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/)
+- **Framework**: Next.js
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI
+- **Charts**: Recharts
+- **Forms**: React Hook Form + Zod
 
 ## Getting Started
-
-### Prerequisites
-Make sure you have Node.js installed.
-
-### Installation
-
 ```bash
+git clone https://github.com/mrsandeep27/GigFlow.git
+cd GigFlow
 npm install
-# or
-pnpm install
-```
-
-### Running Development Server
-
-```bash
 npm run dev
-# or
-pnpm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Scripts
-- `npm run dev`: Runs the development server.
-- `npm run build`: Builds the application for production.
-- `npm run start`: Starts the production server.
-- `npm run lint`: Runs ESLint.
+## Features
+- Interactive data visualizations with Recharts
+- Type-safe form validation with Zod
+- Accessible UI components via Radix UI
+- Responsive design with Tailwind CSS
+
+## License
+MIT
