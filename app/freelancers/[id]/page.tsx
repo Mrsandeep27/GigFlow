@@ -33,8 +33,11 @@ export default function FreelancerProfilePage() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([api.users.get(id), api.reviews.forUser(id)])
-      .then(([w, r]) => { setWorker(w); setReviews(r); })
+    api.users.get(id)
+      .then((w) => {
+        setWorker(w);
+        api.reviews.forUser(id).then(setReviews).catch(() => {});
+      })
       .catch(() => setError('Freelancer not found'))
       .finally(() => setIsLoading(false));
   }, [id]);
@@ -93,11 +96,11 @@ export default function FreelancerProfilePage() {
                   <MapPin className="w-4 h-4" />{[worker.city, worker.state].filter(Boolean).join(', ')}
                 </div>
               )}
-              {worker.rating && (
+              {Number(worker.rating) > 0 && (
                 <div className="flex items-center gap-2 mb-4">
-                  <StarRow rating={worker.rating} size="md" />
+                  <StarRow rating={Number(worker.rating)} size="md" />
                   <span className="font-bold text-foreground">{Number(worker.rating).toFixed(1)}</span>
-                  {worker.total_reviews && <span className="text-muted-foreground text-sm">({worker.total_reviews} reviews)</span>}
+                  {Number(worker.total_reviews) > 0 && <span className="text-muted-foreground text-sm">({worker.total_reviews} reviews)</span>}
                 </div>
               )}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -230,7 +233,7 @@ export default function FreelancerProfilePage() {
               <Card className="p-5">
                 <h3 className="font-semibold text-foreground mb-3 text-sm">Quick Stats</h3>
                 <div className="space-y-3 text-sm">
-                  {worker.rating && (
+                  {Number(worker.rating) > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Rating</span>
                       <div className="flex items-center gap-1">

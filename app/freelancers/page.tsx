@@ -147,14 +147,14 @@ export default function FreelancersPage() {
                                 <h3 className="text-xl font-bold text-foreground">{worker.name}</h3>
                                 {worker.is_verified && <BadgeCheck className="w-5 h-5 text-primary shrink-0" />}
                               </div>
-                              {worker.rating ? (
+                              {Number(worker.rating) > 0 ? (
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                   {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(worker.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(Number(worker.rating)) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
                                   ))}
                                   <span className="text-sm font-medium text-foreground">{Number(worker.rating).toFixed(1)}</span>
-                                  {worker.total_reviews && <span className="text-xs text-muted-foreground">({worker.total_reviews} reviews)</span>}
-                                  {worker.total_jobs_completed && (
+                                  {Number(worker.total_reviews) > 0 && <span className="text-xs text-muted-foreground">({worker.total_reviews} reviews)</span>}
+                                  {Number(worker.total_jobs_completed) > 0 && (
                                     <><span className="text-muted-foreground">·</span><span className="text-xs text-muted-foreground">{worker.total_jobs_completed} jobs</span></>
                                   )}
                                 </div>
