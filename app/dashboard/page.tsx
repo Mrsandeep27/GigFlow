@@ -9,7 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth-context';
 import { api, Gig, Bid, Notification } from '@/lib/api';
-import { Star, Briefcase, TrendingUp, LogOut, Loader2, PlusCircle, User, Bell, Bookmark, Settings } from 'lucide-react';
+import {
+  Star, Briefcase, TrendingUp, LogOut, Loader2, PlusCircle, User, Bell, Bookmark, Settings,
+  MessageSquare, FileText, Users, ChevronRight, Target, Share2,
+} from 'lucide-react';
 
 const statusVariant: Record<string, 'default' | 'outline' | 'secondary' | 'destructive'> = {
   pending:     'outline',
@@ -172,6 +175,60 @@ export default function DashboardPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* ─── Feature Quick Links ─────────────────────────────── */}
+        <div className="mb-8">
+          <h2 className="text-sm font-bold text-foreground mb-3">Quick Access</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {user.role === 'worker' && ([
+              { href: '/applications', icon: Briefcase,    label: 'My Applications', desc: 'Track job pipeline' },
+              { href: '/resume',       icon: FileText,     label: 'Resume Analyzer',  desc: 'AI ATS score' },
+              { href: '/portfolio',    icon: Star,         label: 'Portfolio',         desc: 'Showcase work' },
+              { href: '/chat',         icon: MessageSquare,label: 'Messages',          desc: 'Chat with recruiters' },
+              { href: '/tests',        icon: Target,       label: 'Skill Tests',       desc: 'Prove your skills' },
+              { href: '/referrals',    icon: Share2,       label: 'Referrals',         desc: 'Get referred' },
+              { href: '/discover',     icon: Users,        label: 'Discover',          desc: 'Be found by employers' },
+            ] as const).map(item => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <div className="bg-white border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer group">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors mt-0.5" />
+                    </div>
+                    <p className="text-xs font-bold text-foreground">{item.label}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{item.desc}</p>
+                  </div>
+                </Link>
+              );
+            })}
+            {user.role === 'employer' && ([
+              { href: '/chat',         icon: MessageSquare, label: 'Messages',      desc: 'Chat with candidates' },
+              { href: '/tests',        icon: Target,        label: 'Skill Tests',   desc: 'Evaluate candidates' },
+              { href: '/referrals',    icon: Share2,        label: 'Referrals',     desc: 'Post opportunities' },
+              { href: '/discover',     icon: Users,         label: 'Discover Talent', desc: 'Find candidates' },
+            ] as const).map(item => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <div className="bg-white border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer group">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors mt-0.5" />
+                    </div>
+                    <p className="text-xs font-bold text-foreground">{item.label}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{item.desc}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         {/* ─── Tabs ────────────────────────────────────────────── */}

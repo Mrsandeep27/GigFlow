@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
-import { Menu, X, LayoutDashboard, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, LayoutDashboard, LogOut, ChevronDown, MessageSquare, FileText, Users } from 'lucide-react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,9 +44,25 @@ export default function Navbar() {
                 <span className="absolute bottom-1 left-3.5 right-3.5 h-px bg-primary origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
               </Link>
             )}
+            <Link href="/discover" className="relative px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group">
+              Discover
+              <span className="absolute bottom-1 left-3.5 right-3.5 h-px bg-primary origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
+            </Link>
             {user?.role === 'employer' && (
               <Link href="/jobs/post" className="relative px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group">
                 Post a Job
+                <span className="absolute bottom-1 left-3.5 right-3.5 h-px bg-primary origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
+              </Link>
+            )}
+            {user?.role === 'worker' && (
+              <Link href="/applications" className="relative px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group">
+                Applications
+                <span className="absolute bottom-1 left-3.5 right-3.5 h-px bg-primary origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
+              </Link>
+            )}
+            {user && (
+              <Link href="/chat" className="relative px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group">
+                <MessageSquare className="w-4 h-4 inline-block" />
                 <span className="absolute bottom-1 left-3.5 right-3.5 h-px bg-primary origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
               </Link>
             )}
@@ -122,9 +138,32 @@ export default function Navbar() {
                 Find Talent
               </Link>
             )}
+            <Link href="/discover" className="flex items-center px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/60 rounded-lg transition-colors" onClick={() => setIsOpen(false)}>
+              Discover Talent
+            </Link>
             {user?.role === 'employer' && (
               <Link href="/jobs/post" className="flex items-center px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/60 rounded-lg transition-colors" onClick={() => setIsOpen(false)}>
                 Post a Job
+              </Link>
+            )}
+            {user?.role === 'worker' && (
+              <Link href="/applications" className="flex items-center px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/60 rounded-lg transition-colors" onClick={() => setIsOpen(false)}>
+                My Applications
+              </Link>
+            )}
+            {user?.role === 'worker' && (
+              <Link href="/resume" className="flex items-center px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/60 rounded-lg transition-colors" onClick={() => setIsOpen(false)}>
+                Resume Analyzer
+              </Link>
+            )}
+            {user && (
+              <Link href="/chat" className="flex items-center px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/60 rounded-lg transition-colors" onClick={() => setIsOpen(false)}>
+                Messages
+              </Link>
+            )}
+            {user && (
+              <Link href="/referrals" className="flex items-center px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/60 rounded-lg transition-colors" onClick={() => setIsOpen(false)}>
+                Referrals
               </Link>
             )}
             <div className="flex gap-2 pt-3 pb-1 px-1">
