@@ -34,9 +34,11 @@ export default function ChatConversationPage({ params }: { params: Promise<{ id:
 
     api.chat.messages(convId).then(setMessages).catch(() => {}).finally(() => setLoading(false));
 
-    // Poll for new messages every 5s
+    // Poll every 5s — pause when tab is hidden to save bandwidth
     const interval = setInterval(() => {
-      api.chat.messages(convId, { limit: 20 }).then(msgs => setMessages(msgs)).catch(() => {});
+      if (document.visibilityState === 'visible') {
+        api.chat.messages(convId, { limit: 20 }).then(msgs => setMessages(msgs)).catch(() => {});
+      }
     }, 5000);
     return () => clearInterval(interval);
   }, [user, authLoading, convId, router]);

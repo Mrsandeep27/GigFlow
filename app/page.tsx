@@ -42,17 +42,17 @@ export default function Home() {
 
       {/* ─── Hero ──────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ background: 'var(--hero-bg)' }}>
-        {/* Ambient gradient orbs */}
+        {/* Ambient gradient orbs — GPU-accelerated */}
         <div
-          className="absolute top-[-15%] right-[-8%] w-[700px] h-[700px] rounded-full pointer-events-none"
+          className="gig-orb absolute top-[-15%] right-[-8%] w-[700px] h-[700px] rounded-full"
           style={{ background: 'radial-gradient(circle, oklch(0.55 0.18 264 / 0.25), transparent 65%)', filter: 'blur(80px)' }}
         />
         <div
-          className="absolute bottom-[-20%] left-[-8%] w-[500px] h-[500px] rounded-full pointer-events-none"
+          className="gig-orb absolute bottom-[-20%] left-[-8%] w-[500px] h-[500px] rounded-full"
           style={{ background: 'radial-gradient(circle, oklch(0.54 0.13 210 / 0.18), transparent 65%)', filter: 'blur(70px)' }}
         />
         <div
-          className="absolute top-[45%] left-[50%] w-[350px] h-[350px] rounded-full pointer-events-none"
+          className="gig-orb absolute top-[45%] left-[50%] w-[350px] h-[350px] rounded-full"
           style={{ background: 'radial-gradient(circle, oklch(0.78 0.14 85 / 0.10), transparent 65%)', filter: 'blur(60px)' }}
         />
 
@@ -338,11 +338,11 @@ export default function Home() {
       {/* ─── CTA ────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-20 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--hero-bg)' }}>
         <div
-          className="absolute top-0 right-0 w-96 h-96 rounded-full pointer-events-none"
+          className="gig-orb absolute top-0 right-0 w-96 h-96 rounded-full"
           style={{ background: 'radial-gradient(circle, oklch(0.55 0.18 264 / 0.20), transparent 65%)', filter: 'blur(70px)' }}
         />
         <div
-          className="absolute bottom-0 left-0 w-72 h-72 rounded-full pointer-events-none"
+          className="gig-orb absolute bottom-0 left-0 w-72 h-72 rounded-full"
           style={{ background: 'radial-gradient(circle, oklch(0.78 0.14 85 / 0.12), transparent 65%)', filter: 'blur(60px)' }}
         />
         <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: GRAIN_SVG, backgroundSize: '256px 256px', opacity: 0.038 }} />

@@ -138,10 +138,22 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "kern" 1, "liga" 1, "cv11" 1;
     letter-spacing: -0.01em;
+    /* Improve scroll performance */
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
   }
   h1, h2, h3, h4, h5, h6 {
     letter-spacing: -0.03em;
     font-weight: 700;
+  }
+  img {
+    /* Lazy load all images by default */
+    content-visibility: auto;
+  }
+  /* Responsive images never overflow */
+  img, video {
+    max-width: 100%;
+    height: auto;
   }
 }
 
@@ -175,22 +187,47 @@
 
 .gig-fade-in-up {
   animation: gigFadeInUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
 }
 
 .gig-fade-in {
   animation: gigFadeIn 0.5s ease-out both;
+  will-change: opacity;
 }
 
 .gig-float {
   animation: gigFloat 7s ease-in-out infinite;
+  will-change: transform;
 }
 
 .gig-float-alt {
   animation: gigFloatAlt 9s ease-in-out infinite;
+  will-change: transform;
 }
 
 .gig-pulse {
   animation: gigPulse 2.5s ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* GPU-accelerate blur orbs so they don't trigger main-thread repaints */
+.gig-orb {
+  will-change: transform;
+  transform: translateZ(0);
+  pointer-events: none;
+}
+
+/* Card hover — promote to own compositor layer only on hover */
+.gig-card-hover {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.gig-card-hover:hover {
+  will-change: box-shadow;
+}
+
+/* Content sections — rendering containment for below-fold content */
+.gig-section {
+  contain: layout style;
 }
 
 /* Stagger delays */
