@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
-    "dev:all": "concurrently --names \"next,api\" --prefix-colors \"cyan,magenta\" \"next dev\" \"node gigflow-backend/src/server.js\"",
+    "dev": "next dev --turbopack",
+    "dev:all": "concurrently --names \"next,api\" --prefix-colors \"cyan,magenta\" \"next dev --turbopack\" \"node gigflow-backend/src/server.js\"",
     "lint": "eslint .",
     "start": "next start"
   },
