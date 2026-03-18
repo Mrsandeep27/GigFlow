@@ -19,7 +19,7 @@
 | 2 | **Skill Match Score** | % match against job requirements, missing skills, suggestions |
 | 3 | **Fake Job Detection** | Verified badges, fraud reports, auto-flag at 3 reports |
 | 4 | **AI Resume Analyzer** | ATS score, keyword analysis, improvement tips via Claude AI |
-| 5 | **Direct Chat with Recruiter** | REST-based messaging with 5s polling, rate limiting |
+| 5 | **Direct Chat with Recruiter** | REST-based messaging with adaptive polling, rate limiting |
 | 6 | **Portfolio-Based Hiring** | Projects, case studies, GitHub links, live demos, thumbnails |
 | 7 | **Salary Transparency** | Salary ranges, market benchmarks, interview difficulty per role |
 | 8 | **AI Job Recommendations** | Skill-overlap algorithm matches workers to best-fit jobs |
@@ -69,20 +69,26 @@ gig/
 │   └── auth/                   # Login & signup
 ├── components/
 │   ├── navbar.tsx              # Role-aware nav with all feature links
+│   ├── error-boundary.tsx      # React error boundary with recovery UI
+│   ├── star-rating.tsx         # Shared star rating component
 │   └── ui/                     # shadcn/ui components
 ├── lib/
 │   ├── api.ts                  # Full API client with auto token refresh
-│   └── auth-context.tsx        # Auth state provider
+│   ├── auth-context.tsx        # Auth state provider
+│   └── utils/format-budget.ts  # Shared budget formatter
+├── hooks/
+│   ├── use-debounce.ts         # Debounce hook for search inputs
+│   └── use-mobile.ts           # Mobile breakpoint detection
 └── gigflow-backend/
     ├── src/
     │   ├── controllers/        # applications, chat, portfolio, resume, referrals,
     │   │                       # tests, candidates, auth, gigs, bids, users, reviews...
     │   ├── routes/             # Express route definitions (14 route modules)
-    │   ├── middleware/         # JWT auth middleware
+    │   ├── middleware/         # JWT auth + role-based access control
     │   ├── migrations/
     │   │   ├── 001_schema.sql  # Base schema
     │   │   └── 002_features.sql# 14 new tables for v2 features
-    │   └── config/db.js        # PostgreSQL connection pool
+    │   └── config/db.js        # PostgreSQL connection pool with monitoring
     └── .env                    # Environment config (see below)
 ```
 
@@ -229,14 +235,37 @@ npm run dev
 | GET | `/api/candidates/salary-insights/:gigId` | Salary benchmark data |
 | POST | `/api/candidates/report` | Report fake job |
 
+## Security
+
+- **Socket.IO JWT auth** — token verification on connection + room-based messaging (no broadcast)
+- **Role-based access control** — `requireRole()` middleware enforced on all protected routes
+- **Parameterized queries** — all SQL uses `$1` placeholders, no string interpolation
+- **Input validation** — max length on chat messages (5K), resume text (50K), rate limiting per endpoint
+- **CORS lockdown** — production restricts to `CLIENT_URL` only; dev allows localhost
+- **DB transactions** — test submission + auto-shortlisting wrapped in BEGIN/COMMIT/ROLLBACK
+- **Graceful shutdown** — SIGTERM/SIGINT close HTTP server + drain DB pool before exit
+- **Error boundary** — React ErrorBoundary wraps entire app, catches render crashes with recovery UI
+
 ## Performance
 
 - **Turbopack** — Next.js dev server with fast HMR
-- **`optimizePackageImports`** — lucide-react tree-shaken at compile time
+- **Image optimization** — AVIF/WebP auto-format via Next.js Image config
+- **`optimizePackageImports`** — lucide-react, recharts, date-fns tree-shaken at compile time
 - **`next/font`** — DM Sans + Instrument Serif self-hosted, no Google Fonts network fetch
 - **GPU-accelerated orbs** — `will-change: transform` + `translateZ(0)` on blur elements
-- **Chat polling** — pauses when browser tab is hidden (`document.visibilityState`)
+- **Adaptive chat polling** — 3s when active → backs off to 15s when idle, pauses when tab hidden
+- **gzip compression** — Express `compression` middleware on all API responses
+- **HTTP caching** — `Cache-Control` headers on static endpoints (categories, health)
+- **Race condition handling** — AbortController cancels stale search requests
 - **Rendering containment** — `contain: layout style` on card sections
+- **CSS-only hover states** — footer/orb styles moved from JS handlers to CSS classes
+
+## SEO
+
+- **Dynamic sitemap** — auto-generated `sitemap.xml` at build time
+- **robots.txt** — crawl rules with private route exclusions
+- **Open Graph + Twitter cards** — metadata on all pages
+- **Semantic HTML** — proper heading hierarchy, landmark elements
 
 ## License
 

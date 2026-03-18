@@ -126,38 +126,51 @@ exports.submitTest = async (req, res) => {
     for (const q of questionsRes.rows) {
       totalPoints += q.points;
       const userAnswer = answers[q.id];
-      const isCorrect = userAnswer && userAnswer.toLowerCase().trim() === q.correct_answer.toLowerCase().trim();
+      const isCorrect = userAnswer && q.correct_answer
+        && String(userAnswer).toLowerCase().trim() === String(q.correct_answer).toLowerCase().trim();
       if (isCorrect) earnedPoints += q.points;
-      gradedAnswers[q.id] = { answered: userAnswer || null, correct: isCorrect };
+      gradedAnswers[q.id] = { answered: userAnswer || null, correct: !!isCorrect };
     }
 
     const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
     const passed = score >= test.passing_score;
 
-    // Save submission
-    await pool.query(
-      `INSERT INTO test_submissions (test_id, applicant_id, answers, score, passed, time_taken_seconds)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [testId, userId, JSON.stringify(gradedAnswers), score, passed, time_taken_seconds || null]
-    );
+    // Use transaction for atomic submission + shortlisting
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    // If passed: auto-shortlist application
-    if (passed) {
-      await pool.query(
-        `UPDATE applications SET status = 'shortlisted', updated_at = NOW()
-         WHERE gig_id = $1 AND applicant_id = $2 AND status IN ('applied','viewed')`,
-        [test.gig_id, userId]
+      await client.query(
+        `INSERT INTO test_submissions (test_id, applicant_id, answers, score, passed, time_taken_seconds)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [testId, userId, JSON.stringify(gradedAnswers), score, passed, time_taken_seconds || null]
       );
 
-      // Notify applicant
+      if (passed) {
+        await client.query(
+          `UPDATE applications SET status = 'shortlisted', updated_at = NOW()
+           WHERE gig_id = $1 AND applicant_id = $2 AND status IN ('applied','viewed')`,
+          [test.gig_id, userId]
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
+
+    // Notifications (non-critical, outside transaction)
+    if (passed) {
       try {
         await pool.query(
           'INSERT INTO notifications (user_id, type, title, message, data) VALUES ($1,$2,$3,$4,$5)',
-          [userId, 'test_passed', '🎉 Test Passed & Shortlisted!',
+          [userId, 'test_passed', 'Test Passed & Shortlisted!',
            `You scored ${score}% on the skill test and have been automatically shortlisted!`,
            JSON.stringify({ gig_id: test.gig_id, score })]
         );
-        // Notify employer
         const gigRes = await pool.query('SELECT created_by, title FROM gigs WHERE id = $1', [test.gig_id]);
         if (gigRes.rows.length > 0) {
           await pool.query(
@@ -167,7 +180,9 @@ exports.submitTest = async (req, res) => {
              JSON.stringify({ gig_id: test.gig_id })]
           );
         }
-      } catch (_) {}
+      } catch (notifErr) {
+        console.error('Test notification error:', notifErr.message);
+      }
     }
 
     res.json({

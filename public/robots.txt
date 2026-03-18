@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /chat
+Disallow: /auth/
+
+Sitemap: https://gigflow.in/sitemap.xml

@@ -8,18 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import { api, Worker, Review } from '@/lib/api';
+import { StarRating } from '@/components/star-rating';
 import { Star, MapPin, Loader2, BadgeCheck, Briefcase, Calendar } from 'lucide-react';
-
-function StarRow({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' }) {
-  const sz = size === 'md' ? 'w-5 h-5' : 'w-4 h-4';
-  return (
-    <div className="flex items-center gap-0.5">
-      {[...Array(5)].map((_, i) => (
-        <Star key={i} className={`${sz} ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
-      ))}
-    </div>
-  );
-}
 
 export default function FreelancerProfilePage() {
   const params = useParams();
@@ -76,7 +66,7 @@ export default function FreelancerProfilePage() {
         <Card className="p-8 mb-6">
           <div className="flex flex-col md:flex-row gap-8 items-start">
             {worker.avatar_url ? (
-              <img src={worker.avatar_url} alt={worker.name} className="w-28 h-28 rounded-xl object-cover shrink-0" />
+              <img src={worker.avatar_url} alt={worker.name} loading="lazy" className="w-28 h-28 rounded-xl object-cover shrink-0" />
             ) : (
               <div className="w-28 h-28 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-4xl shrink-0">
                 {worker.name[0].toUpperCase()}
@@ -98,7 +88,7 @@ export default function FreelancerProfilePage() {
               )}
               {Number(worker.rating) > 0 && (
                 <div className="flex items-center gap-2 mb-4">
-                  <StarRow rating={Number(worker.rating)} size="md" />
+                  <StarRating rating={Number(worker.rating)} size="md" />
                   <span className="font-bold text-foreground">{Number(worker.rating).toFixed(1)}</span>
                   {Number(worker.total_reviews) > 0 && <span className="text-muted-foreground text-sm">({worker.total_reviews} reviews)</span>}
                 </div>
@@ -167,7 +157,7 @@ export default function FreelancerProfilePage() {
                     <div key={review.id} className="pb-5 border-b border-border last:border-0 last:pb-0">
                       <div className="flex items-start gap-3 mb-2">
                         {review.reviewer_avatar ? (
-                          <img src={review.reviewer_avatar} alt={review.reviewer_name} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                          <img src={review.reviewer_avatar} alt={review.reviewer_name} loading="lazy" className="w-10 h-10 rounded-full object-cover shrink-0" />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
                             {review.reviewer_name[0]}
@@ -186,7 +176,7 @@ export default function FreelancerProfilePage() {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <StarRow rating={review.rating} />
+                              <StarRating rating={review.rating} />
                               <span className="text-sm font-medium text-foreground">{review.rating}/5</span>
                             </div>
                           </div>

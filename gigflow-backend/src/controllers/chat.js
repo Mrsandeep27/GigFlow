@@ -145,6 +145,9 @@ exports.sendMessage = async (req, res) => {
     if (!content || !content.trim()) {
       return res.status(400).json({ message: 'Message content is required' });
     }
+    if (content.trim().length > 5000) {
+      return res.status(400).json({ message: 'Message must be under 5,000 characters' });
+    }
 
     // Verify access
     const convRes = await pool.query(

@@ -251,8 +251,9 @@ exports.getRecommendations = async (req, res) => {
     const skillConditions = skills.map((_, i) => `g.skills_required::text ILIKE $${i + 1}`);
     const skillParams = skills.map(s => `%${s}%`);
 
-    const excludeIds = appliedGigIds.length > 0
-      ? `AND g.id NOT IN (${appliedGigIds.join(',')})`
+    // Use parameterized array to prevent SQL injection
+    const excludeClause = appliedGigIds.length > 0
+      ? `AND g.id != ALL($${skillParams.length + 2}::int[])`
       : '';
 
     const query = `
@@ -271,13 +272,15 @@ exports.getRecommendations = async (req, res) => {
       JOIN users u ON g.created_by = u.id
       LEFT JOIN categories c ON g.category_id = c.id
       WHERE g.status = 'open' AND g.is_fake_flagged = false
-      ${excludeIds}
+      ${excludeClause}
       AND (${skillConditions.join(' OR ')})
       ORDER BY matching_skills_count DESC, g.created_at DESC
       LIMIT 10
     `;
 
-    const result = await pool.query(query, [...skillParams, userId]);
+    const queryParams = [...skillParams, userId];
+    if (appliedGigIds.length > 0) queryParams.push(appliedGigIds);
+    const result = await pool.query(query, queryParams);
 
     const jobs = result.rows.map(job => {
       const total = job.total_skills || 1;

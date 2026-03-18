@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api, Worker } from '@/lib/api';
-import { Star, MapPin, Loader2, BadgeCheck } from 'lucide-react';
+import { StarRating } from '@/components/star-rating';
+import { MapPin, Loader2, BadgeCheck } from 'lucide-react';
 
 const RATE_FILTERS = [
   { label: 'All Rates', min: '', max: '' },
@@ -136,7 +137,7 @@ export default function FreelancersPage() {
                         <div className="p-6">
                           <div className="flex items-start gap-5 mb-4">
                             {worker.avatar_url ? (
-                              <img src={worker.avatar_url} alt={worker.name} className="w-16 h-16 rounded-full object-cover shrink-0" />
+                              <img src={worker.avatar_url} alt={worker.name} loading="lazy" className="w-16 h-16 rounded-full object-cover shrink-0" />
                             ) : (
                               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
                                 {worker.name[0].toUpperCase()}
@@ -149,11 +150,7 @@ export default function FreelancersPage() {
                               </div>
                               {Number(worker.rating) > 0 ? (
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(Number(worker.rating)) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
-                                  ))}
-                                  <span className="text-sm font-medium text-foreground">{Number(worker.rating).toFixed(1)}</span>
-                                  {Number(worker.total_reviews) > 0 && <span className="text-xs text-muted-foreground">({worker.total_reviews} reviews)</span>}
+                                  <StarRating rating={worker.rating!} showValue reviewCount={worker.total_reviews} />
                                   {Number(worker.total_jobs_completed) > 0 && (
                                     <><span className="text-muted-foreground">·</span><span className="text-xs text-muted-foreground">{worker.total_jobs_completed} jobs</span></>
                                   )}

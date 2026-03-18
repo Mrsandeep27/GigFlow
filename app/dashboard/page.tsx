@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth-context';
 import { api, Gig, Bid, Notification } from '@/lib/api';
+import { StarRating } from '@/components/star-rating';
 import {
-  Star, Briefcase, TrendingUp, LogOut, Loader2, PlusCircle, User, Bell, Bookmark, Settings,
-  MessageSquare, FileText, Users, ChevronRight, Target, Share2,
+  Briefcase, TrendingUp, LogOut, Loader2, PlusCircle, User, Bell, Bookmark, Settings,
+  MessageSquare, FileText, Users, ChevronRight, Target, Share2, Star,
 } from 'lucide-react';
 
 const statusVariant: Record<string, 'default' | 'outline' | 'secondary' | 'destructive'> = {
@@ -79,9 +80,11 @@ export default function DashboardPage() {
     );
   }
 
-  const pendingBids  = myBids.filter(b => b.status === 'pending').length;
-  const acceptedBids = myBids.filter(b => b.status === 'accepted').length;
-  const openGigs     = myGigs.filter(g => g.status === 'open').length;
+  const { pending: pendingBids, accepted: acceptedBids } = myBids.reduce(
+    (acc, b) => { if (b.status === 'pending') acc.pending++; else if (b.status === 'accepted') acc.accepted++; return acc; },
+    { pending: 0, accepted: 0 }
+  );
+  const openGigs = myGigs.reduce((n, g) => n + (g.status === 'open' ? 1 : 0), 0);
 
   const stats = user.role === 'employer'
     ? [
@@ -104,17 +107,14 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* ─── Profile header ──────────────────────────────────── */}
-        <div className="bg-white border border-border rounded-xl p-6 mb-6 relative overflow-hidden">
+        <div className="bg-card border border-border rounded-xl p-6 mb-6 relative overflow-hidden">
           {/* Subtle background gradient */}
-          <div
-            className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, oklch(0.44 0.18 264 / 0.04), transparent 70%)', filter: 'blur(40px)' }}
-          />
+          <div className="gig-orb gig-orb-dash absolute top-0 right-0 w-64 h-64 rounded-full" />
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
             <div className="flex items-center gap-5">
               {/* Avatar */}
               {user.avatar_url ? (
-                <img src={user.avatar_url} alt={user.name} className="w-[72px] h-[72px] rounded-full object-cover border-2 border-border" />
+                <img src={user.avatar_url} alt={user.name} loading="lazy" className="w-[72px] h-[72px] rounded-full object-cover border-2 border-border" />
               ) : (
                 <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">
                   <User className="w-8 h-8 text-white" />
@@ -130,13 +130,7 @@ export default function DashboardPage() {
                   {user.bio || (user.role === 'employer' ? 'Employer Account' : 'Freelancer Account')}
                 </p>
                 {user.rating ? (
-                  <div className="flex items-center gap-1.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(Number(user.rating)) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/25'}`} />
-                    ))}
-                    <span className="text-xs font-semibold text-foreground ml-0.5">{Number(user.rating).toFixed(1)}</span>
-                    <span className="text-xs text-muted-foreground">({user.total_reviews} reviews)</span>
-                  </div>
+                  <StarRating rating={user.rating} showValue reviewCount={user.total_reviews} />
                 ) : null}
               </div>
             </div>
@@ -164,7 +158,7 @@ export default function DashboardPage() {
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <div key={stat.label} className="bg-white border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
+              <div key={stat.label} className="bg-card border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.color}`}>
@@ -193,7 +187,7 @@ export default function DashboardPage() {
               const Icon = item.icon;
               return (
                 <Link key={item.href} href={item.href}>
-                  <div className="bg-white border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer group">
+                  <div className="bg-card border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer group">
                     <div className="flex items-start justify-between mb-2">
                       <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
                         <Icon className="w-4 h-4 text-primary" />
@@ -215,7 +209,7 @@ export default function DashboardPage() {
               const Icon = item.icon;
               return (
                 <Link key={item.href} href={item.href}>
-                  <div className="bg-white border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer group">
+                  <div className="bg-card border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer group">
                     <div className="flex items-start justify-between mb-2">
                       <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
                         <Icon className="w-4 h-4 text-primary" />
@@ -274,7 +268,7 @@ export default function DashboardPage() {
                   <Link href="/jobs/post"><Button size="sm">Post Your First Job</Button></Link>
                 </div>
               ) : myGigs.map((gig) => (
-                <div key={gig.id} className="bg-white border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
+                <div key={gig.id} className="bg-card border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <Link href={`/jobs/${gig.id}`} className="text-[15px] font-bold text-foreground hover:text-primary transition-colors line-clamp-1">
@@ -310,7 +304,7 @@ export default function DashboardPage() {
                   <Link href="/jobs"><Button size="sm">Browse Jobs</Button></Link>
                 </div>
               ) : myBids.map((bid) => (
-                <div key={bid.id} className="bg-white border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
+                <div key={bid.id} className="bg-card border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <Link href={`/jobs/${bid.gig_id}`} className="text-[15px] font-bold text-foreground hover:text-primary transition-colors line-clamp-1">
@@ -350,7 +344,7 @@ export default function DashboardPage() {
                 <Link href="/jobs"><Button size="sm">Browse Jobs</Button></Link>
               </div>
             ) : savedGigs.map((gig) => (
-              <div key={gig.id} className="bg-white border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
+              <div key={gig.id} className="bg-card border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <Link href={`/jobs/${gig.id}`} className="text-[15px] font-bold text-foreground hover:text-primary transition-colors line-clamp-1">

@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
 import { api, Worker } from '@/lib/api';
-import { Search, MapPin, Star, BadgeCheck, Github, Linkedin, Globe, Loader2, Users, SlidersHorizontal } from 'lucide-react';
+import { StarRating } from '@/components/star-rating';
+import { Search, MapPin, BadgeCheck, Github, Linkedin, Globe, Loader2, Users, SlidersHorizontal } from 'lucide-react';
 
 export default function DiscoverPage() {
   const { user } = useAuth();
@@ -104,7 +105,7 @@ export default function DiscoverPage() {
                     {/* Avatar + name */}
                     <div className="flex items-start gap-4 mb-4">
                       {c.avatar_url ? (
-                        <img src={c.avatar_url} alt={c.name} className="w-14 h-14 rounded-full object-cover border-2 border-border shrink-0" />
+                        <img src={c.avatar_url} alt={c.name} loading="lazy" className="w-14 h-14 rounded-full object-cover border-2 border-border shrink-0" />
                       ) : (
                         <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl shrink-0">
                           {c.name[0].toUpperCase()}
@@ -138,10 +139,7 @@ export default function DiscoverPage() {
                     {/* Rating */}
                     {c.rating && (
                       <div className="flex items-center gap-1.5 mb-3">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(c.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/25'}`} />
-                        ))}
-                        <span className="text-xs font-bold">{Number(c.rating).toFixed(1)}</span>
+                        <StarRating rating={c.rating} showValue />
                         {c.years_experience && <span className="text-xs text-muted-foreground">· {c.years_experience}yr exp</span>}
                       </div>
                     )}

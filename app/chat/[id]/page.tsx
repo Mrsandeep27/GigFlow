@@ -20,7 +20,11 @@ export default function ChatConversationPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const msgCountRef = useRef(0);
   const convId = parseInt(id);
+
+  // Track message count in ref to avoid stale closure
+  useEffect(() => { msgCountRef.current = messages.length; }, [messages]);
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
@@ -34,13 +38,28 @@ export default function ChatConversationPage({ params }: { params: Promise<{ id:
 
     api.chat.messages(convId).then(setMessages).catch(() => {}).finally(() => setLoading(false));
 
-    // Poll every 5s — pause when tab is hidden to save bandwidth
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        api.chat.messages(convId, { limit: 20 }).then(msgs => setMessages(msgs)).catch(() => {});
+    // Adaptive polling — fast when active, slow when idle, pause when hidden
+    let pollDelay = 3000;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+    const poll = () => {
+      if (cancelled) return;
+      if (document.visibilityState !== 'visible') {
+        timeoutId = setTimeout(poll, pollDelay);
+        return;
       }
-    }, 5000);
-    return () => clearInterval(interval);
+      api.chat.messages(convId, { limit: 50 })
+        .then(msgs => {
+          if (cancelled) return;
+          const hasNew = msgs.length !== msgCountRef.current;
+          setMessages(msgs);
+          pollDelay = hasNew ? 3000 : Math.min(pollDelay * 1.5, 15000);
+        })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) timeoutId = setTimeout(poll, pollDelay); });
+    };
+    timeoutId = setTimeout(poll, pollDelay);
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, [user, authLoading, convId, router]);
 
   useEffect(() => {
@@ -83,7 +102,7 @@ export default function ChatConversationPage({ params }: { params: Promise<{ id:
             </Button>
           </Link>
           {otherAvatar ? (
-            <img src={otherAvatar} alt={otherName} className="w-9 h-9 rounded-full object-cover border border-border" />
+            <img src={otherAvatar} alt={otherName} loading="lazy" className="w-9 h-9 rounded-full object-cover border border-border" />
           ) : (
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shrink-0">
               {otherName?.[0]?.toUpperCase()}

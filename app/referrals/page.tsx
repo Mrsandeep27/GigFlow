@@ -82,6 +82,8 @@ export default function ReferralsPage() {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
   }
 
+  const pendingRequestCount = requests.filter(r => r.status === 'pending').length;
+
   const handlePost = async () => {
     if (!form.title.trim() || !form.company.trim()) { setError('Title and company are required'); return; }
     setSaving(true); setError('');
@@ -159,9 +161,9 @@ export default function ReferralsPage() {
                 }`}
               >
                 <Icon className="w-4 h-4" />{t.label}
-                {t.id === 'requests' && requests.filter(r => r.status === 'pending').length > 0 && (
+                {t.id === 'requests' && pendingRequestCount > 0 && (
                   <span className="ml-1 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    {requests.filter(r => r.status === 'pending').length}
+                    {pendingRequestCount}
                   </span>
                 )}
               </button>

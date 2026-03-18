@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/candidates');
 const auth = require('../middleware/auth');
+const { requireRole } = require('../middleware/auth');
 
-router.get('/', ctrl.discoverCandidates);
-router.put('/discoverable', auth, ctrl.setDiscoverable);
-router.get('/recommendations', auth, ctrl.getRecommendations);
-router.post('/company', auth, ctrl.upsertCompany);
+router.get('/', auth, ctrl.discoverCandidates);
+router.put('/discoverable', auth, requireRole('worker'), ctrl.setDiscoverable);
+router.get('/recommendations', auth, requireRole('worker'), ctrl.getRecommendations);
+router.post('/company', auth, requireRole('employer'), ctrl.upsertCompany);
 router.get('/company/:userId', ctrl.getCompany);
 router.post('/report', auth, ctrl.reportFraud);
-router.get('/salary-insights/:gigId', ctrl.salaryInsights);
+router.get('/salary-insights/:gigId', auth, ctrl.salaryInsights);
 
 module.exports = router;

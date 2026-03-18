@@ -1,20 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api, Gig, Category } from '@/lib/api';
+import { formatBudget } from '@/lib/utils/format-budget';
 import { MapPin, Briefcase, Clock, Star, Loader2, Search, SlidersHorizontal, ArrowUpRight } from 'lucide-react';
-
-function formatBudget(gig: Gig) {
-  const cur = gig.currency === 'INR' ? '₹' : '$';
-  if (gig.budget_min && gig.budget_max) return `${cur}${gig.budget_min.toLocaleString()} – ${cur}${gig.budget_max.toLocaleString()}`;
-  if (gig.budget_min) return `${cur}${gig.budget_min.toLocaleString()}+`;
-  if (gig.budget_max) return `Up to ${cur}${gig.budget_max.toLocaleString()}`;
-  return 'Negotiable';
-}
 
 export default function JobsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,7 +19,14 @@ export default function JobsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchGigs = useCallback(async (p = 1, search = searchQuery, cat = selectedCategory) => {
+    // Cancel previous in-flight request to prevent race conditions
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
     try {
       const res = await api.gigs.list({
@@ -35,14 +35,15 @@ export default function JobsPage() {
         ...(search ? { search } : {}),
         ...(cat ? { category: cat } : {}),
       });
+      if (controller.signal.aborted) return;
       setGigs(res.gigs);
       setTotal(res.total);
       setPage(res.page);
       setTotalPages(res.totalPages);
     } catch {
-      setGigs([]);
+      if (!controller.signal.aborted) setGigs([]);
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setIsLoading(false);
     }
   }, [searchQuery, selectedCategory]);
 

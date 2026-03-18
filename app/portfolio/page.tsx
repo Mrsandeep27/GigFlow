@@ -227,7 +227,7 @@ export default function PortfolioPage() {
                 {/* Thumbnail */}
                 {item.thumbnail_url ? (
                   <div className="h-44 overflow-hidden bg-muted">
-                    <img src={item.thumbnail_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img src={item.thumbnail_url} alt={item.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   </div>
                 ) : (
                   <div className="h-44 bg-gradient-to-br from-primary/8 to-accent/8 flex items-center justify-center">

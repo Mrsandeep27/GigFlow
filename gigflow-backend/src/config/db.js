@@ -10,7 +10,9 @@ const pool = new Pool({
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: true }
+    : { rejectUnauthorized: false },
 });
 
 pool.connect().then(client => {
@@ -21,5 +23,9 @@ pool.connect().then(client => {
   process.exit(1);
 });
 
-// pg-compatible query wrapper: pool.query(sql, params) returns { rows }
+// Monitor pool errors
+pool.on('error', (err) => {
+  console.error('Unexpected pool error:', err.message);
+});
+
 module.exports = pool;

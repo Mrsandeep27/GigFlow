@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
@@ -24,15 +25,18 @@ const candidatesRoutes   = require('./routes/candidates');
 
 const app = express();
 
-// ── Security ─────────────────────────────────────────────────
+// ── Security & Performance ───────────────────────────────────
 app.use(helmet());
+app.use(compression());
 
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:3000',   // Next.js default
-  'http://localhost:5173',   // Vite
-  'http://localhost:3001',
-].filter(Boolean);
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.CLIENT_URL].filter(Boolean)
+  : [
+      process.env.CLIENT_URL,
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:3001',
+    ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -43,8 +47,17 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' })); // increased for resume text
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// ── Response compression ─────────────────────────────────────
+app.use((req, res, next) => {
+  // Cache static API responses (categories, health) for 5 min
+  if (req.method === 'GET' && (req.path.includes('/categories') || req.path === '/api/health')) {
+    res.set('Cache-Control', 'public, max-age=300');
+  }
+  next();
+});
 
 // ── Rate limiting ─────────────────────────────────────────────
 const authLimiter    = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });

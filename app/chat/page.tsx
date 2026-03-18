@@ -64,7 +64,7 @@ export default function ChatListPage() {
                 <Link key={conv.id} href={`/chat/${conv.id}`}>
                   <div className="bg-white border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-sm transition-all flex items-center gap-4 cursor-pointer">
                     {otherAvatar ? (
-                      <img src={otherAvatar} alt={otherName} className="w-12 h-12 rounded-full object-cover border border-border shrink-0" />
+                      <img src={otherAvatar} alt={otherName} loading="lazy" className="w-12 h-12 rounded-full object-cover border border-border shrink-0" />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-lg shrink-0">
                         {otherName?.[0]?.toUpperCase()}

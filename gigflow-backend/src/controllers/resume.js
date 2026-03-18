@@ -9,8 +9,11 @@ async function analyzeWithClaude(resumeText) {
   }
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
@@ -18,28 +21,18 @@ async function analyzeWithClaude(resumeText) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1500,
+        max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `You are an expert ATS (Applicant Tracking System) and resume reviewer. Analyze the following resume and return a JSON response ONLY (no markdown, no explanation, just raw JSON).
+          content: `Analyze this resume for ATS compatibility. Return ONLY raw JSON, no markdown.
 
-Resume:
-${resumeText.substring(0, 4000)}
+Resume (first 3000 chars):
+${resumeText.substring(0, 3000)}
 
-Return this exact JSON structure:
-{
-  "ats_score": <number 0-100>,
-  "summary": "<2-3 sentence overall assessment>",
-  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
-  "weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
-  "missing_keywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>", "<keyword 4>", "<keyword 5>"],
-  "formatting_tips": ["<tip 1>", "<tip 2>", "<tip 3>"],
-  "improvement_tips": ["<tip 1>", "<tip 2>", "<tip 3>"],
-  "detected_skills": ["<skill 1>", "<skill 2>", "<skill 3>"],
-  "experience_level": "<junior|mid|senior|lead>",
-  "estimated_yoe": <number>
-}`,
+JSON schema:
+{"ats_score":<0-100>,"summary":"<2 sentences>","strengths":["...","...","..."],"weaknesses":["...","...","..."],"missing_keywords":["...","...","...","...","..."],"formatting_tips":["...","...","..."],"improvement_tips":["...","...","..."],"detected_skills":["...","...","..."],"experience_level":"<junior|mid|senior|lead>","estimated_yoe":<number>}`,
         }],
+        system: 'You are an expert ATS resume reviewer. Respond with only valid JSON, no explanation.',
       }),
     });
 
@@ -119,6 +112,9 @@ exports.analyze = async (req, res) => {
     if (!resume_text || resume_text.trim().length < 100) {
       return res.status(400).json({ message: 'Please provide at least 100 characters of resume text' });
     }
+    if (resume_text.trim().length > 50000) {
+      return res.status(400).json({ message: 'Resume text must be under 50,000 characters' });
+    }
 
     const analysis = await analyzeWithClaude(resume_text.trim());
 
@@ -129,12 +125,14 @@ exports.analyze = async (req, res) => {
       [userId, resume_text.trim(), analysis.ats_score, JSON.stringify(analysis)]
     );
 
-    // Auto-update user skills from detected skills
+    // Auto-update user skills from detected skills (batch insert)
     if (analysis.detected_skills && analysis.detected_skills.length > 0) {
-      for (const skill of analysis.detected_skills) {
+      const skills = analysis.detected_skills.map(s => s.trim()).filter(Boolean);
+      if (skills.length > 0) {
+        const values = skills.map((_, i) => `($1, $${i + 2})`).join(', ');
         await pool.query(
-          'INSERT INTO user_skills (user_id, skill) VALUES ($1,$2) ON CONFLICT DO NOTHING',
-          [userId, skill.trim()]
+          `INSERT INTO user_skills (user_id, skill) VALUES ${values} ON CONFLICT DO NOTHING`,
+          [userId, ...skills]
         );
       }
     }

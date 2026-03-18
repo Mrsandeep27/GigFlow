@@ -7,10 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Navbar from '@/components/navbar';
 import { api, Gig, Worker } from '@/lib/api';
+import { StarRating } from '@/components/star-rating';
+import { formatBudget } from '@/lib/utils/format-budget';
 import { Briefcase, Users, TrendingUp, ArrowRight, Star, BadgeCheck, MapPin, Search, ArrowUpRight } from 'lucide-react';
-
-// Noise grain SVG for dark sections
-const GRAIN_SVG = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 export default function Home() {
   const router = useRouter();
@@ -28,39 +27,19 @@ export default function Home() {
     router.push(`/jobs${searchQuery.trim() ? `?search=${encodeURIComponent(searchQuery.trim())}` : ''}`);
   };
 
-  const formatBudget = (gig: Gig) => {
-    const curr = gig.currency || '₹';
-    if (gig.budget_min && gig.budget_max) return `${curr}${Number(gig.budget_min).toLocaleString('en-IN')} – ${curr}${Number(gig.budget_max).toLocaleString('en-IN')}`;
-    if (gig.budget_max) return `Up to ${curr}${Number(gig.budget_max).toLocaleString('en-IN')}`;
-    if (gig.budget_min) return `From ${curr}${Number(gig.budget_min).toLocaleString('en-IN')}`;
-    return 'Negotiable';
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
       {/* ─── Hero ──────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ background: 'var(--hero-bg)' }}>
+      <section className="relative overflow-hidden bg-hero-bg">
         {/* Ambient gradient orbs — GPU-accelerated */}
-        <div
-          className="gig-orb absolute top-[-15%] right-[-8%] w-[700px] h-[700px] rounded-full"
-          style={{ background: 'radial-gradient(circle, oklch(0.55 0.18 264 / 0.25), transparent 65%)', filter: 'blur(80px)' }}
-        />
-        <div
-          className="gig-orb absolute bottom-[-20%] left-[-8%] w-[500px] h-[500px] rounded-full"
-          style={{ background: 'radial-gradient(circle, oklch(0.54 0.13 210 / 0.18), transparent 65%)', filter: 'blur(70px)' }}
-        />
-        <div
-          className="gig-orb absolute top-[45%] left-[50%] w-[350px] h-[350px] rounded-full"
-          style={{ background: 'radial-gradient(circle, oklch(0.78 0.14 85 / 0.10), transparent 65%)', filter: 'blur(60px)' }}
-        />
+        <div className="gig-orb gig-orb-primary absolute top-[-15%] right-[-8%] w-[700px] h-[700px] rounded-full" />
+        <div className="gig-orb gig-orb-accent absolute bottom-[-20%] left-[-8%] w-[500px] h-[500px] rounded-full" />
+        <div className="gig-orb gig-orb-gold absolute top-[45%] left-[50%] w-[350px] h-[350px] rounded-full" />
 
         {/* Grain overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ backgroundImage: GRAIN_SVG, backgroundSize: '256px 256px', opacity: 0.038 }}
-        />
+        <div className="gig-grain absolute inset-0 pointer-events-none" />
 
         {/* Content */}
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40">
@@ -229,7 +208,7 @@ export default function Home() {
                   <div className="group bg-white border border-border rounded-xl p-6 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer h-full">
                     <div className="flex items-center gap-4 mb-5">
                       {freelancer.avatar_url ? (
-                        <img src={freelancer.avatar_url} alt={freelancer.name} className="w-14 h-14 rounded-full object-cover border-2 border-border group-hover:border-primary/30 transition-colors" />
+                        <img src={freelancer.avatar_url} alt={freelancer.name} loading="lazy" className="w-14 h-14 rounded-full object-cover border-2 border-border group-hover:border-primary/30 transition-colors" />
                       ) : (
                         <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl shrink-0">
                           {freelancer.name[0].toUpperCase()}
@@ -252,14 +231,8 @@ export default function Home() {
                     </div>
 
                     {freelancer.rating && (
-                      <div className="flex items-center gap-1.5 mb-4">
-                        <div className="flex gap-0.5">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(freelancer.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/25'}`} />
-                          ))}
-                        </div>
-                        <span className="text-xs font-bold text-foreground">{Number(freelancer.rating).toFixed(1)}</span>
-                        {freelancer.total_reviews && <span className="text-xs text-muted-foreground">({freelancer.total_reviews})</span>}
+                      <div className="mb-4">
+                        <StarRating rating={freelancer.rating} showValue reviewCount={freelancer.total_reviews} />
                       </div>
                     )}
 
@@ -318,10 +291,7 @@ export default function Home() {
                       <div className="w-10 h-10 bg-primary/8 border border-primary/15 rounded-xl flex items-center justify-center shrink-0">
                         <Icon className="w-[18px] h-[18px] text-primary" />
                       </div>
-                      <span
-                        className="text-4xl font-display font-normal leading-none"
-                        style={{ color: 'oklch(0.90 0.01 260)' }}
-                      >
+                      <span className="text-4xl font-display font-normal leading-none gig-step-num">
                         {step.step}
                       </span>
                     </div>
@@ -336,16 +306,10 @@ export default function Home() {
       </section>
 
       {/* ─── CTA ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-20 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--hero-bg)' }}>
-        <div
-          className="gig-orb absolute top-0 right-0 w-96 h-96 rounded-full"
-          style={{ background: 'radial-gradient(circle, oklch(0.55 0.18 264 / 0.20), transparent 65%)', filter: 'blur(70px)' }}
-        />
-        <div
-          className="gig-orb absolute bottom-0 left-0 w-72 h-72 rounded-full"
-          style={{ background: 'radial-gradient(circle, oklch(0.78 0.14 85 / 0.12), transparent 65%)', filter: 'blur(60px)' }}
-        />
-        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: GRAIN_SVG, backgroundSize: '256px 256px', opacity: 0.038 }} />
+      <section className="relative overflow-hidden py-20 px-4 sm:px-6 lg:px-8 bg-hero-bg">
+        <div className="gig-orb gig-orb-cta-primary absolute top-0 right-0 w-96 h-96 rounded-full" />
+        <div className="gig-orb gig-orb-cta-gold absolute bottom-0 left-0 w-72 h-72 rounded-full" />
+        <div className="gig-grain absolute inset-0 pointer-events-none" />
 
         <div className="relative z-10 max-w-6xl mx-auto text-center">
           <p className="text-[10px] font-bold tracking-[0.16em] text-white/35 uppercase mb-5">Get Started Today</p>
@@ -375,7 +339,7 @@ export default function Home() {
       </section>
 
       {/* ─── Footer ─────────────────────────────────────────────── */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8" style={{ background: 'oklch(0.08 0.02 264)', borderTop: '1px solid oklch(1 0 0 / 0.05)' }}>
+      <footer className="gig-footer py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-10">
             <div className="col-span-2">
@@ -385,7 +349,7 @@ export default function Home() {
                 </div>
                 <span className="font-bold text-sm text-white">GigFlow</span>
               </div>
-              <p className="text-xs leading-relaxed max-w-xs" style={{ color: 'oklch(1 0 0 / 0.30)' }}>
+              <p className="gig-footer-link text-xs leading-relaxed max-w-xs">
                 A professional marketplace connecting skilled freelancers with businesses across India.
               </p>
             </div>
@@ -404,15 +368,13 @@ export default function Home() {
               },
             ].map((col) => (
               <div key={col.heading}>
-                <h4 className="font-semibold mb-4 text-[10px] uppercase tracking-[0.14em]" style={{ color: 'oklch(1 0 0 / 0.40)' }}>
+                <h4 className="gig-footer-heading font-semibold mb-4 text-[10px] uppercase tracking-[0.14em]">
                   {col.heading}
                 </h4>
                 <ul className="space-y-2.5">
                   {col.links.map((l) => (
                     <li key={l.label}>
-                      <Link href={l.href} className="text-xs transition-colors" style={{ color: 'oklch(1 0 0 / 0.30)' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = 'oklch(1 0 0 / 0.75)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = 'oklch(1 0 0 / 0.30)')}>
+                      <Link href={l.href} className="gig-footer-link text-xs">
                         {l.label}
                       </Link>
                     </li>
@@ -421,13 +383,11 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6" style={{ borderTop: '1px solid oklch(1 0 0 / 0.06)' }}>
-            <p className="text-xs" style={{ color: 'oklch(1 0 0 / 0.22)' }}>© 2026 GigFlow Technologies Pvt. Ltd. All rights reserved.</p>
+          <div className="gig-footer-divider flex flex-col sm:flex-row items-center justify-between gap-3 pt-6">
+            <p className="gig-footer-copy text-xs">© 2026 GigFlow Technologies Pvt. Ltd. All rights reserved.</p>
             <div className="flex gap-6">
               {['Terms of Service', 'Privacy Policy'].map((t) => (
-                <Link key={t} href="#" className="text-xs transition-colors" style={{ color: 'oklch(1 0 0 / 0.22)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'oklch(1 0 0 / 0.55)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'oklch(1 0 0 / 0.22)')}>
+                <Link key={t} href="#" className="gig-footer-legal text-xs">
                   {t}
                 </Link>
               ))}
