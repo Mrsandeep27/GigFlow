@@ -136,8 +136,9 @@ exports.submitTest = async (req, res) => {
     const passed = score >= test.passing_score;
 
     // Use transaction for atomic submission + shortlisting
-    const client = await pool.connect();
+    let client;
     try {
+      client = await pool.connect();
       await client.query('BEGIN');
 
       await client.query(
@@ -156,10 +157,10 @@ exports.submitTest = async (req, res) => {
 
       await client.query('COMMIT');
     } catch (txErr) {
-      await client.query('ROLLBACK');
+      if (client) await client.query('ROLLBACK').catch(() => {});
       throw txErr;
     } finally {
-      client.release();
+      if (client) client.release();
     }
 
     // Notifications (non-critical, outside transaction)

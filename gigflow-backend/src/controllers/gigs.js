@@ -87,10 +87,10 @@ exports.getGigById = async (req, res) => {
       return res.status(404).json({ message: 'Gig not found' });
     }
 
-    // Increment view count
-    await pool.query('UPDATE gigs SET views = views + 1 WHERE id = $1', [id]);
-
     res.json(result.rows[0]);
+
+    // Increment view count (fire-and-forget after response)
+    pool.query('UPDATE gigs SET views = views + 1 WHERE id = $1', [id]).catch(() => {});
   } catch (error) {
     console.error('Get gig error:', error.message);
     res.status(500).json({ message: 'Server error' });

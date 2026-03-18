@@ -179,7 +179,8 @@ exports.latest = async (req, res) => {
       [req.user.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'No analysis found' });
-    res.json({ ...result.rows[0], ...result.rows[0].analysis });
+    const row = result.rows[0];
+    res.json({ ...row, ...(row.analysis || {}) });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }

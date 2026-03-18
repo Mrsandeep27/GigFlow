@@ -172,7 +172,7 @@ function CreateTestPanel({ onCreated }: { onCreated: (t: SkillTest) => void }) {
 function TakeTest({ test, onDone }: { test: SkillTest; onDone: () => void }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ score: number; passed: boolean; correct: number; total: number } | null>(null);
+  const [result, setResult] = useState<{ score: number; passed: boolean; passing_score: number; message: string } | null>(null);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -195,7 +195,7 @@ function TakeTest({ test, onDone }: { test: SkillTest; onDone: () => void }) {
         <p className={`font-semibold text-sm mb-2 ${result.passed ? 'text-emerald-600' : 'text-destructive'}`}>
           {result.passed ? 'Passed!' : 'Not Passed'}
         </p>
-        <p className="text-sm text-muted-foreground mb-1">{result.correct} / {result.total} correct</p>
+        <p className="text-sm text-muted-foreground mb-1">Passing score: {result.passing_score}%</p>
         {result.passed && (
           <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 text-sm text-emerald-700 font-medium">
             You may be auto-shortlisted for the linked position!

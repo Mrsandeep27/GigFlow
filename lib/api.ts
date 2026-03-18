@@ -197,7 +197,7 @@ export const api = {
     create: (data: CreateTestData) =>
       request<{ message: string; testId: number }>('/tests', { method: 'POST', body: JSON.stringify(data) }),
     forGig: (gigId: number) => request<SkillTest>(`/tests/gig/${gigId}`),
-    submit: (testId: number, data: { answers: Record<number, string>; time_taken_seconds?: number }) =>
+    submit: (testId: number, data: { answers: Record<number, number | string>; time_taken_seconds?: number }) =>
       request<TestResult>(`/tests/${testId}/submit`, { method: 'POST', body: JSON.stringify(data) }),
     results: (testId: number) => request<TestSubmission[]>(`/tests/${testId}/results`),
     mySubmissions: () => request<TestSubmission[]>('/tests/my-submissions'),

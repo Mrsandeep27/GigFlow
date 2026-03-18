@@ -88,9 +88,12 @@ export default function ReferralsPage() {
     if (!form.title.trim() || !form.company.trim()) { setError('Title and company are required'); return; }
     setSaving(true); setError('');
     try {
-      const r = await api.referrals.post(form);
-      setMine(prev => [r, ...prev]);
-      setReferrals(prev => [r, ...prev]);
+      await api.referrals.create({
+        position: form.title,
+        company_name: form.company,
+        description: form.description,
+      });
+      await loadAll();
       setForm(EMPTY_FORM);
       setShowForm(false);
       setTab('mine');
@@ -103,8 +106,8 @@ export default function ReferralsPage() {
   const handleRequest = async (referralId: number) => {
     setRequestingId(referralId);
     try {
-      await api.referrals.request(referralId);
-      setReferrals(prev => prev.map(r => r.id === referralId ? { ...r, _requested: true } : r));
+      await api.referrals.request(referralId, {});
+      setReferrals(prev => prev.map(r => r.id === referralId ? { ...r, _requested: true } as any : r));
     } catch {}
     setRequestingId(null);
   };
@@ -112,7 +115,7 @@ export default function ReferralsPage() {
   const handleAction = async (requestId: number, action: 'approve' | 'reject') => {
     setActionId(requestId);
     try {
-      await api.referrals.respond(requestId, action);
+      await api.referrals.respond(requestId, { status: action === 'approve' ? 'approved' : 'rejected' });
       await loadAll();
     } catch {}
     setActionId(null);

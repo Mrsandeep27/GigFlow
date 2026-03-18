@@ -90,8 +90,9 @@ exports.createBid = async (req, res) => {
 
 // Accept bid (atomic — accept one, reject all others, update gig)
 exports.acceptBid = async (req, res) => {
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     const { bidId } = req.params;
     const userId = req.user.id;
 
@@ -144,11 +145,11 @@ exports.acceptBid = async (req, res) => {
 
     res.json({ message: 'Bid accepted successfully' });
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client) await client.query('ROLLBACK').catch(() => {});
     console.error('Accept bid error:', error.message);
     res.status(500).json({ message: 'Server error' });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 };
 
