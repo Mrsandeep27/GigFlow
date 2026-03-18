@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
 import { api, Gig, Bid } from '@/lib/api';
+import { StarRating } from '@/components/star-rating';
+import { formatBudget } from '@/lib/utils/format-budget';
 import { Star, MapPin, Users, Eye, Loader2, CheckCircle } from 'lucide-react';
 
 export default function JobDetailPage() {
@@ -71,14 +73,6 @@ export default function JobDetailPage() {
   };
   const handleRejectBid = async (bidId: number) => {
     try { await api.bids.reject(bidId); api.bids.forGig(id).then(setBids); } catch {}
-  };
-
-  const formatBudget = (g: Gig) => {
-    const curr = g.currency || '₹';
-    if (g.budget_min && g.budget_max) return `${curr}${Number(g.budget_min).toLocaleString('en-IN')} – ${curr}${Number(g.budget_max).toLocaleString('en-IN')}`;
-    if (g.budget_max) return `Up to ${curr}${Number(g.budget_max).toLocaleString('en-IN')}`;
-    if (g.budget_min) return `From ${curr}${Number(g.budget_min).toLocaleString('en-IN')}`;
-    return 'Negotiable';
   };
 
   const isOwner = user && gig && user.role === 'employer' && gig.creator_id === user.id;
@@ -284,7 +278,7 @@ export default function JobDetailPage() {
                           className="resize-none"
                         />
                       </div>
-                      <Button onClick={handleSubmitBid} className="w-full" disabled={bidLoading || !bidAmount || !bidMessage}>
+                      <Button onClick={handleSubmitBid} className="w-full" disabled={bidLoading || !bidAmount || !bidMessage.trim()}>
                         {bidLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting...</> : 'Submit Proposal'}
                       </Button>
                     </Card>

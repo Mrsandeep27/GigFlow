@@ -156,8 +156,16 @@ export default function DiscoverPage() {
 
                     {/* Links */}
                     <div className="flex items-center gap-3 pt-3 border-t border-border/60">
-                      {c.github_url && <Github className="w-4 h-4 text-muted-foreground hover:text-foreground" />}
-                      {c.linkedin_url && <Linkedin className="w-4 h-4 text-muted-foreground hover:text-blue-600" />}
+                      {c.github_url && (
+                        <a href={c.github_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                          <Github className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
+                        </a>
+                      )}
+                      {c.linkedin_url && (
+                        <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                          <Linkedin className="w-4 h-4 text-muted-foreground hover:text-blue-600 transition-colors" />
+                        </a>
+                      )}
                       {c.total_jobs_completed && (
                         <span className="text-xs text-muted-foreground ml-auto">{c.total_jobs_completed} jobs done</span>
                       )}

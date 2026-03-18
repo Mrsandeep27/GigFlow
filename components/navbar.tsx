@@ -9,6 +9,7 @@ import { Menu, X, LayoutDashboard, LogOut, ChevronDown, MessageSquare, FileText,
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
 
@@ -73,30 +74,44 @@ export default function Navbar() {
             {!isLoading && (
               user ? (
                 <>
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted/60 transition-colors cursor-default">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-[11px] shrink-0">
-                      {user.name[0].toUpperCase()}
-                    </div>
-                    <div className="leading-tight">
-                      <div className="font-semibold text-foreground text-sm">{user.name.split(' ')[0]}</div>
-                      <div className="text-[10px] text-muted-foreground capitalize tracking-wide">{user.role}</div>
-                    </div>
-                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground ml-0.5" />
+                  <div className="relative">
+                    <button
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-[11px] shrink-0">
+                        {user.name[0].toUpperCase()}
+                      </div>
+                      <div className="leading-tight text-left">
+                        <div className="font-semibold text-foreground text-sm">{user.name.split(' ')[0]}</div>
+                        <div className="text-[10px] text-muted-foreground capitalize tracking-wide">{user.role}</div>
+                      </div>
+                      <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground ml-0.5 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {dropdownOpen && (
+                      <div className="absolute right-0 top-full mt-1.5 w-48 bg-white border border-border rounded-lg shadow-lg py-1.5 z-50">
+                        <Link href="/dashboard" className="flex items-center gap-2 px-3.5 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors">
+                          <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+                        </Link>
+                        <Link href="/profile" className="flex items-center gap-2 px-3.5 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors">
+                          <Users className="w-3.5 h-3.5" /> Edit Profile
+                        </Link>
+                        {user.role === 'worker' && (
+                          <Link href="/portfolio" className="flex items-center gap-2 px-3.5 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors">
+                            <FileText className="w-3.5 h-3.5" /> Portfolio
+                          </Link>
+                        )}
+                        <div className="h-px bg-border my-1.5" />
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center gap-2 px-3.5 py-2 text-sm text-destructive hover:bg-destructive/8 transition-colors w-full text-left"
+                        >
+                          <LogOut className="w-3.5 h-3.5" /> Sign Out
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="w-px h-5 bg-border mx-1" />
-                  <Link href="/dashboard">
-                    <Button variant="ghost" size="sm" className="text-sm font-medium gap-1.5 h-8 hover:bg-primary/8 hover:text-primary transition-colors">
-                      <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-sm font-medium gap-1.5 h-8 bg-transparent text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="w-3.5 h-3.5" /> Sign Out
-                  </Button>
                 </>
               ) : (
                 <>

@@ -159,9 +159,17 @@ exports.updateStatus = async (req, res) => {
     const app = appRes.rows[0];
     if (app.created_by !== userId) return res.status(403).json({ message: 'Not authorized' });
 
-    const validStatuses = ['applied','viewed','shortlisted','interview_scheduled','offer','rejected'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
+    const validTransitions = {
+      applied: ['viewed', 'shortlisted', 'rejected'],
+      viewed: ['shortlisted', 'interview_scheduled', 'rejected'],
+      shortlisted: ['interview_scheduled', 'offer', 'rejected'],
+      interview_scheduled: ['offer', 'rejected'],
+      offer: ['rejected'],
+      rejected: [],
+    };
+    const allowed = validTransitions[app.status] || [];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ message: `Cannot change status from '${app.status}' to '${status}'` });
     }
 
     await pool.query(

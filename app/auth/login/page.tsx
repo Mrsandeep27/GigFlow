@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,12 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user, isLoading: authLoading } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) router.push('/dashboard');
+  }, [user, authLoading, router]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

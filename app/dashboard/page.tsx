@@ -64,6 +64,7 @@ export default function DashboardPage() {
     setSavedGigs((prev) => prev.filter((g) => g.id !== gigId));
   };
   const handleCloseJob   = async (gigId: number) => {
+    if (!confirm('Close this job? It will stop receiving new proposals.')) return;
     await api.gigs.update(gigId, { status: 'closed' });
     setMyGigs((prev) => prev.map((g) => g.id === gigId ? { ...g, status: 'closed' } : g));
   };

@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-// Create a review
+// Create a review (verify gig participation)
 exports.createReview = async (req, res) => {
   try {
     const { gig_id, reviewed_id, rating, comment } = req.body;
@@ -11,6 +11,40 @@ exports.createReview = async (req, res) => {
     }
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    // Verify gig exists and is completed
+    const gigCheck = await pool.query(
+      'SELECT id, created_by, assigned_to, status FROM gigs WHERE id = $1',
+      [gig_id]
+    );
+    if (gigCheck.rows.length === 0) return res.status(404).json({ message: 'Gig not found' });
+    const gig = gigCheck.rows[0];
+
+    // Verify reviewer participated in this gig
+    const isEmployer = gig.created_by === reviewer_id;
+    const isWorker = gig.assigned_to === reviewer_id;
+    const hadBid = !isEmployer && !isWorker;
+
+    if (hadBid) {
+      // Check if reviewer had an accepted bid or application
+      const participation = await pool.query(
+        `SELECT id FROM bids WHERE gig_id = $1 AND bidder_id = $2 AND status = 'accepted'
+         UNION ALL
+         SELECT id FROM applications WHERE gig_id = $1 AND applicant_id = $2 AND status IN ('offer', 'shortlisted')`,
+        [gig_id, reviewer_id]
+      );
+      if (participation.rows.length === 0) {
+        return res.status(403).json({ message: 'You can only review gigs you participated in' });
+      }
+    }
+
+    // Verify reviewing the right person
+    if (isEmployer && reviewed_id !== gig.assigned_to) {
+      return res.status(400).json({ message: 'You can only review the assigned worker' });
+    }
+    if (isWorker && reviewed_id !== gig.created_by) {
+      return res.status(400).json({ message: 'You can only review the employer' });
     }
 
     const existing = await pool.query(
@@ -25,6 +59,16 @@ exports.createReview = async (req, res) => {
       `INSERT INTO reviews (gig_id, reviewer_id, reviewed_id, rating, comment)
        VALUES ($1, $2, $3, $4, $5)`,
       [gig_id, reviewer_id, reviewed_id, rating, comment || null]
+    );
+
+    // Recalculate reviewed user's average rating
+    const ratingRes = await pool.query(
+      'SELECT AVG(rating)::numeric(3,2) AS avg_rating, COUNT(*) AS total FROM reviews WHERE reviewed_id = $1',
+      [reviewed_id]
+    );
+    await pool.query(
+      'UPDATE users SET rating = $1, total_reviews = $2 WHERE id = $3',
+      [ratingRes.rows[0].avg_rating, parseInt(ratingRes.rows[0].total), reviewed_id]
     );
 
     res.status(201).json({ message: 'Review submitted successfully' });

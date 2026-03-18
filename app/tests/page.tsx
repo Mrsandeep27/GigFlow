@@ -7,7 +7,7 @@ import Navbar from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
-import { api, SkillTest, TestQuestion } from '@/lib/api';
+import { api, SkillTest, TestQuestion, TestSubmission } from '@/lib/api';
 import {
   ArrowLeft, Plus, Loader2, CheckCircle2, XCircle, Clock,
   ChevronRight, Trophy, Target, BookOpen, X, Trash2,
@@ -375,7 +375,13 @@ export default function TestsPage() {
                     <span className="text-[10px] text-muted-foreground">
                       {t.pass_count ?? 0} passed · {t.fail_count ?? 0} failed
                     </span>
-                    <Button size="sm" variant="outline" className="ml-auto h-7 text-xs bg-transparent gap-1">
+                    <Button size="sm" variant="outline" className="ml-auto h-7 text-xs bg-transparent gap-1"
+                      onClick={async () => {
+                        try {
+                          const results = await api.tests.results(t.id);
+                          alert(`Test Results:\n${results.length === 0 ? 'No submissions yet' : results.map((r: TestSubmission) => `${r.name}: ${r.score}% ${r.passed ? '✓' : '✗'}`).join('\n')}`);
+                        } catch { alert('Failed to load results'); }
+                      }}>
                       <BarChart2 className="w-3 h-3" /> Results
                     </Button>
                   </div>

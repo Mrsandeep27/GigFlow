@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,17 @@ import { formatBudget } from '@/lib/utils/format-budget';
 import { MapPin, Briefcase, Clock, Star, Loader2, Search, SlidersHorizontal, ArrowUpRight } from 'lucide-react';
 
 export default function JobsPage() {
-  const [searchQuery, setSearchQuery] = useState('');
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>}>
+      <JobsContent />
+    </Suspense>
+  );
+}
+
+function JobsContent() {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

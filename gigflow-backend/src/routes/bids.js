@@ -10,18 +10,24 @@ const validate = (req, res, next) => {
   next();
 };
 
+// Specific routes first to avoid :bidId matching
 router.get('/mine', authMiddleware, bidsController.getMyBids);
 router.get('/gig/:gigId', authMiddleware, bidsController.getBidsForGig);
 
 router.post('/', authMiddleware, [
   body('gigId').isInt({ min: 1 }).withMessage('Valid gig ID required'),
   body('amount').isFloat({ min: 1 }).withMessage('Amount must be greater than 0'),
-  body('message').trim().notEmpty().withMessage('Message is required'),
+  body('message').trim().notEmpty().withMessage('Message is required').isLength({ max: 2000 }),
   body('delivery_days').optional().isInt({ min: 1 }),
 ], validate, bidsController.createBid);
 
 router.put('/:bidId/accept', authMiddleware, bidsController.acceptBid);
 router.put('/:bidId/reject', authMiddleware, bidsController.rejectBid);
 router.put('/:bidId/withdraw', authMiddleware, bidsController.withdrawBid);
+router.put('/:bidId', authMiddleware, [
+  body('amount').optional().isFloat({ min: 1 }),
+  body('message').optional().trim().notEmpty().isLength({ max: 2000 }),
+  body('delivery_days').optional().isInt({ min: 1 }),
+], validate, bidsController.updateBid);
 
 module.exports = router;

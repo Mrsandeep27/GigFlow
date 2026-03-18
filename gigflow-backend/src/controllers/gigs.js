@@ -137,6 +137,14 @@ exports.createGig = async (req, res) => {
   }
 };
 
+// Valid gig status transitions
+const GIG_TRANSITIONS = {
+  open: ['closed', 'in_progress'],
+  in_progress: ['completed', 'open'],
+  completed: [],
+  closed: ['open'],
+};
+
 // Update gig
 exports.updateGig = async (req, res) => {
   try {
@@ -148,17 +156,35 @@ exports.updateGig = async (req, res) => {
     } = req.body;
     const userId = req.user.id;
 
-    const check = await pool.query('SELECT created_by FROM gigs WHERE id = $1', [id]);
+    const check = await pool.query('SELECT created_by, status AS current_status FROM gigs WHERE id = $1', [id]);
     if (check.rows.length === 0) return res.status(404).json({ message: 'Gig not found' });
     if (check.rows[0].created_by !== userId) return res.status(403).json({ message: 'Not authorized' });
 
+    // Validate status transition
+    const currentStatus = check.rows[0].current_status;
+    const newStatus = status || currentStatus;
+    if (newStatus !== currentStatus) {
+      const allowed = GIG_TRANSITIONS[currentStatus] || [];
+      if (!allowed.includes(newStatus)) {
+        return res.status(400).json({ message: `Cannot change status from '${currentStatus}' to '${newStatus}'` });
+      }
+    }
+
+    // Validate budget
+    if (budget_min && budget_max && Number(budget_min) > Number(budget_max)) {
+      return res.status(400).json({ message: 'Minimum budget cannot exceed maximum' });
+    }
+
     await pool.query(
-      `UPDATE gigs SET title=$1, description=$2, category_id=$3, job_type=$4,
-       budget_min=$5, budget_max=$6, city=$7, state=$8, is_remote=$9,
-       skills_required=$10, deadline=$11, status=$12, updated_at=NOW()
+      `UPDATE gigs SET title=COALESCE($1,title), description=COALESCE($2,description),
+       category_id=COALESCE($3,category_id), job_type=COALESCE($4,job_type),
+       budget_min=COALESCE($5,budget_min), budget_max=COALESCE($6,budget_max),
+       city=COALESCE($7,city), state=COALESCE($8,state), is_remote=COALESCE($9,is_remote),
+       skills_required=COALESCE($10,skills_required), deadline=COALESCE($11,deadline),
+       status=$12, updated_at=NOW()
        WHERE id=$13`,
       [title, description, category_id, job_type, budget_min, budget_max,
-       city, state, is_remote, skills_required, deadline, status || 'open', id]
+       city, state, is_remote, skills_required, deadline, newStatus, id]
     );
 
     res.json({ message: 'Gig updated successfully' });

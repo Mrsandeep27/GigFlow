@@ -79,9 +79,10 @@ export default function PortfolioPage() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!confirm('Delete this portfolio item? This cannot be undone.')) return;
     setDeletingId(id);
     try {
-      await api.portfolio.remove(id);
+      await api.portfolio.delete(id);
       setItems(prev => prev.filter(i => i.id !== id));
     } catch {}
     setDeletingId(null);
