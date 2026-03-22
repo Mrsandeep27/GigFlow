@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/cron/keep-alive",
+      "destination": "/api/cron/keep-alive"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
@@ -10,5 +14,11 @@
       "maxDuration": 30,
       "memory": 512
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/keep-alive",
+      "schedule": "0 6 */5 * *"
+    }
+  ]
 }
