@@ -1,4 +1,6 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// In production (Vercel), API runs on same origin as serverless functions → use '' (relative)
+// In development, use localhost:5000 where the Express dev server runs
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;

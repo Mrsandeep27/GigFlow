@@ -3,7 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env.local') });
+// Fallback: also load from gigflow-backend/.env for local dev server
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 // ── Existing routes ──────────────────────────────────────────
 const authRoutes        = require('./routes/auth');
@@ -29,18 +32,17 @@ const app = express();
 app.use(helmet());
 app.use(compression());
 
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.CLIENT_URL].filter(Boolean)
-  : [
-      process.env.CLIENT_URL,
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:3001',
-    ].filter(Boolean);
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'https://gig-flow-work.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:3001',
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, mobile apps, etc.)
+    // Allow requests with no origin (same-origin serverless, curl, mobile apps)
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
