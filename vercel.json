@@ -1,20 +1,4 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/cron/keep-alive",
-      "destination": "/api/cron/keep-alive"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    }
-  ],
-  "functions": {
-    "api/[...path].js": {
-      "maxDuration": 30,
-      "memory": 512
-    }
-  },
   "crons": [
     {
       "path": "/api/cron/keep-alive",
