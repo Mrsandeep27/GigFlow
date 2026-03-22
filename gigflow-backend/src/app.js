@@ -90,13 +90,28 @@ app.use('/api/tests',        testsRoutes);
 app.use('/api/candidates',   candidatesRoutes);
 
 // ── Health check ─────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'not tested';
+  try {
+    const pool = require('./config/db');
+    const result = await pool.query('SELECT NOW() as time');
+    dbStatus = `connected (${result.rows[0].time})`;
+  } catch (err) {
+    dbStatus = `error: ${err.message}`;
+  }
+
   res.json({
     status: 'ok',
     project: 'gigflow',
     version: '2.0.0',
-    region: 'ap-south-1',
-    features: ['applications','chat','portfolio','resume-ai','referrals','skill-tests','discover'],
+    database: dbStatus,
+    env_check: {
+      DB_HOST: !!process.env.DB_HOST,
+      DB_USER: !!process.env.DB_USER,
+      DB_PASSWORD: !!process.env.DB_PASSWORD,
+      DB_NAME: !!process.env.DB_NAME,
+      JWT_SECRET: !!process.env.JWT_SECRET,
+    },
   });
 });
 
