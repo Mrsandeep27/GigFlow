@@ -97,8 +97,8 @@ exports.login = async (req, res) => {
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
     });
   } catch (error) {
-    console.error('Login error:', error.message);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', error.message, error.stack);
+    res.status(500).json({ message: 'Server error', debug: error.message });
   }
 };
 

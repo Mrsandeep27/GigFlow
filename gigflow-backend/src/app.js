@@ -117,11 +117,11 @@ app.get('/api/health', async (req, res) => {
 
 // ── Global error handler ─────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err.message);
+  console.error('Unhandled error:', err.message, err.stack);
   if (err.message?.startsWith('CORS:')) {
     return res.status(403).json({ message: err.message });
   }
-  res.status(500).json({ message: 'Internal server error' });
+  res.status(500).json({ message: 'Internal server error', debug: err.message });
 });
 
 module.exports = app;
