@@ -49,8 +49,15 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+// On Vercel, the body is already parsed — skip express.json() if body exists
+app.use((req, res, next) => {
+  if (req.body && Object.keys(req.body).length > 0) return next();
+  express.json({ limit: '2mb' })(req, res, next);
+});
+app.use((req, res, next) => {
+  if (req.body && Object.keys(req.body).length > 0) return next();
+  express.urlencoded({ extended: true, limit: '2mb' })(req, res, next);
+});
 
 // ── Response compression ─────────────────────────────────────
 app.use((req, res, next) => {
