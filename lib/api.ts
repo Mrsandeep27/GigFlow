@@ -2,6 +2,27 @@
 // In development, use localhost:5000 where the Express dev server runs
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+// ── Client-side GET cache — reduces duplicate API calls ─────
+const cache = new Map<string, { data: unknown; ts: number }>();
+const INFLIGHT = new Map<string, Promise<unknown>>();
+
+// Cache durations (ms) by path pattern
+const CACHE_TTL: [RegExp, number][] = [
+  [/\/gigs\/categories/, 10 * 60 * 1000],  // 10 min — categories rarely change
+  [/\/auth\/me/,          2 * 60 * 1000],   // 2 min  — user profile
+  [/\/gigs\?/,               30 * 1000],    // 30s    — job listings
+  [/\/users\?/,              30 * 1000],    // 30s    — freelancer listings
+  [/\/notifications/,        20 * 1000],    // 20s    — notifications
+  [/\/chat\/unread/,         15 * 1000],    // 15s    — unread count
+];
+
+function getCacheTTL(path: string): number {
+  for (const [pattern, ttl] of CACHE_TTL) {
+    if (pattern.test(path)) return ttl;
+  }
+  return 0; // no cache by default
+}
+
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('gf_token');
@@ -26,26 +47,72 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
-  let token = getToken();
-  const res = await fetch(`${BASE_URL}/api${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  const method = options.method?.toUpperCase() || 'GET';
+  const isGet = method === 'GET';
+  const cacheKey = path;
 
-  if (res.status === 401 && retry) {
-    token = await refreshAccessToken();
-    if (token) return request<T>(path, options, false);
-    localStorage.removeItem('gf_token');
-    localStorage.removeItem('gf_refresh');
+  // For GET requests: check cache first
+  if (isGet) {
+    const ttl = getCacheTTL(path);
+    const cached = cache.get(cacheKey);
+    if (cached && ttl > 0 && Date.now() - cached.ts < ttl) {
+      return cached.data as T;
+    }
+    // Deduplicate: if same request is already in-flight, reuse it
+    const inflight = INFLIGHT.get(cacheKey);
+    if (inflight) return inflight as Promise<T>;
   }
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data as T;
+  const doFetch = async (): Promise<T> => {
+    let token = getToken();
+    const res = await fetch(`${BASE_URL}/api${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+
+    if (res.status === 401 && retry) {
+      token = await refreshAccessToken();
+      if (token) return request<T>(path, options, false);
+      localStorage.removeItem('gf_token');
+      localStorage.removeItem('gf_refresh');
+    }
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Request failed');
+
+    // Cache successful GET responses
+    if (isGet && getCacheTTL(path) > 0) {
+      cache.set(cacheKey, { data, ts: Date.now() });
+    }
+
+    return data as T;
+  };
+
+  if (isGet) {
+    const promise = doFetch().finally(() => INFLIGHT.delete(cacheKey));
+    INFLIGHT.set(cacheKey, promise);
+    return promise;
+  }
+
+  // For mutations: invalidate related caches
+  const result = await doFetch();
+  // Clear caches that might be stale after a write
+  for (const key of cache.keys()) {
+    if (key.startsWith(path.split('/').slice(0, 2).join('/'))) {
+      cache.delete(key);
+    }
+  }
+  return result;
+}
+
+// Utility to clear all caches (call on logout)
+export function clearApiCache() {
+  cache.clear();
+  INFLIGHT.clear();
 }
 
 export const api = {

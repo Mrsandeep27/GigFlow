@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { api, User } from './api';
+import { api, User, clearApiCache } from './api';
 
 interface AuthState {
   user: User | null;
@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     api.auth.logout().catch(() => {});
+    clearApiCache();
     clearSession();
   };
 

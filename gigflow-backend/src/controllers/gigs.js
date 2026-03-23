@@ -230,9 +230,15 @@ exports.getMyGigs = async (req, res) => {
   }
 };
 
-// Get categories
+// Get categories — cached in memory (refreshes every 10 min)
+let categoriesCache = { data: null, ts: 0 };
+const CATEGORIES_TTL = 10 * 60 * 1000;
+
 exports.getCategories = async (req, res) => {
   try {
+    if (categoriesCache.data && Date.now() - categoriesCache.ts < CATEGORIES_TTL) {
+      return res.json(categoriesCache.data);
+    }
     const result = await pool.query(
       `SELECT c.*, json_agg(json_build_object('id', s.id, 'name', s.name) ORDER BY s.name)
          FILTER (WHERE s.id IS NOT NULL) AS subcategories
@@ -240,6 +246,7 @@ exports.getCategories = async (req, res) => {
        LEFT JOIN subcategories s ON s.category_id = c.id
        GROUP BY c.id ORDER BY c.name`
     );
+    categoriesCache = { data: result.rows, ts: Date.now() };
     res.json(result.rows);
   } catch (error) {
     console.error('Get categories error:', error.message);
