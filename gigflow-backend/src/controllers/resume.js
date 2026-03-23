@@ -1,48 +1,82 @@
 const pool = require('../config/db');
 
-// AI analysis using Claude API (server-side)
-async function analyzeWithClaude(resumeText) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+// Ensure resume tables exist (runs once)
+let tablesChecked = false;
+async function ensureTables() {
+  if (tablesChecked) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS resume_analyses (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        resume_text TEXT NOT NULL,
+        ats_score INT CHECK (ats_score BETWEEN 0 AND 100),
+        analysis JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS user_skills (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        skill VARCHAR(100) NOT NULL,
+        UNIQUE(user_id, skill)
+      );
+    `);
+    tablesChecked = true;
+  } catch (err) {
+    console.error('Table check error:', err.message);
+  }
+}
+
+// AI analysis using Groq API (free tier — no credit card needed)
+async function analyzeWithAI(resumeText) {
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    // Fallback: basic rule-based analysis
     return fallbackAnalysis(resumeText);
   }
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.3,
         max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: `Analyze this resume for ATS compatibility. Return ONLY raw JSON, no markdown.
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert ATS resume reviewer. Respond with only valid JSON.',
+          },
+          {
+            role: 'user',
+            content: `Analyze this resume for ATS compatibility. Return ONLY valid JSON matching this exact schema:
+{"ats_score":<0-100>,"summary":"<2 sentences>","strengths":["...","...","..."],"weaknesses":["...","...","..."],"missing_keywords":["...","...","...","...","..."],"formatting_tips":["...","...","..."],"improvement_tips":["...","...","..."],"detected_skills":["...","...","..."],"experience_level":"<junior|mid|senior|lead>","estimated_yoe":<number>}
 
 Resume (first 3000 chars):
-${resumeText.substring(0, 3000)}
-
-JSON schema:
-{"ats_score":<0-100>,"summary":"<2 sentences>","strengths":["...","...","..."],"weaknesses":["...","...","..."],"missing_keywords":["...","...","...","...","..."],"formatting_tips":["...","...","..."],"improvement_tips":["...","...","..."],"detected_skills":["...","...","..."],"experience_level":"<junior|mid|senior|lead>","estimated_yoe":<number>}`,
-        }],
-        system: 'You are an expert ATS resume reviewer. Respond with only valid JSON, no explanation.',
+${resumeText.substring(0, 3000)}`,
+          },
+        ],
       }),
     });
+    clearTimeout(timeout);
 
-    if (!response.ok) throw new Error('Claude API error');
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`Groq API ${response.status}: ${errBody.substring(0, 200)}`);
+    }
 
     const data = await response.json();
-    const text = data.content[0].text.trim();
+    const text = data.choices[0].message.content.trim();
     return JSON.parse(text);
   } catch (err) {
-    console.error('Claude API error, using fallback:', err.message);
+    console.error('AI API error, using fallback:', err.message);
     return fallbackAnalysis(resumeText);
   }
 }
@@ -116,30 +150,45 @@ exports.analyze = async (req, res) => {
       return res.status(400).json({ message: 'Resume text must be under 50,000 characters' });
     }
 
-    const analysis = await analyzeWithClaude(resume_text.trim());
+    const analysis = await analyzeWithAI(resume_text.trim());
 
-    // Save analysis to DB
-    const saved = await pool.query(
-      `INSERT INTO resume_analyses (user_id, resume_text, ats_score, analysis)
-       VALUES ($1,$2,$3,$4) RETURNING id, created_at`,
-      [userId, resume_text.trim(), analysis.ats_score, JSON.stringify(analysis)]
-    );
+    // Ensure tables exist before DB operations
+    await ensureTables();
 
-    // Auto-update user skills from detected skills (batch insert)
+    // Save analysis to DB (non-blocking — don't fail if DB has issues)
+    let savedId = null;
+    let savedAt = new Date().toISOString();
+    try {
+      const saved = await pool.query(
+        `INSERT INTO resume_analyses (user_id, resume_text, ats_score, analysis)
+         VALUES ($1,$2,$3,$4) RETURNING id, created_at`,
+        [userId, resume_text.trim(), analysis.ats_score, JSON.stringify(analysis)]
+      );
+      savedId = saved.rows[0].id;
+      savedAt = saved.rows[0].created_at;
+    } catch (dbErr) {
+      console.error('Resume DB save error (non-fatal):', dbErr.message);
+    }
+
+    // Auto-update user skills from detected skills
     if (analysis.detected_skills && analysis.detected_skills.length > 0) {
       const skills = analysis.detected_skills.map(s => s.trim()).filter(Boolean);
       if (skills.length > 0) {
-        const values = skills.map((_, i) => `($1, $${i + 2})`).join(', ');
-        await pool.query(
-          `INSERT INTO user_skills (user_id, skill) VALUES ${values} ON CONFLICT DO NOTHING`,
-          [userId, ...skills]
-        );
+        try {
+          const values = skills.map((_, i) => `($1, $${i + 2})`).join(', ');
+          await pool.query(
+            `INSERT INTO user_skills (user_id, skill) VALUES ${values} ON CONFLICT DO NOTHING`,
+            [userId, ...skills]
+          );
+        } catch (skillErr) {
+          console.error('Skills save error (non-fatal):', skillErr.message);
+        }
       }
     }
 
     res.json({
-      id: saved.rows[0].id,
-      created_at: saved.rows[0].created_at,
+      id: savedId,
+      created_at: savedAt,
       ...analysis,
     });
   } catch (error) {
@@ -151,6 +200,7 @@ exports.analyze = async (req, res) => {
 // GET /api/resume/history — Get analysis history for user
 exports.history = async (req, res) => {
   try {
+    await ensureTables();
     const result = await pool.query(
       `SELECT id, ats_score, analysis->>'summary' AS summary,
               analysis->>'experience_level' AS experience_level,
@@ -163,13 +213,14 @@ exports.history = async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.json([]);
   }
 };
 
 // GET /api/resume/latest — Get latest analysis for user
 exports.latest = async (req, res) => {
   try {
+    await ensureTables();
     const result = await pool.query(
       `SELECT id, ats_score, analysis, created_at
        FROM resume_analyses
@@ -182,6 +233,7 @@ exports.latest = async (req, res) => {
     const row = result.rows[0];
     res.json({ ...row, ...(row.analysis || {}) });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    // Table might not exist yet — treat as no analysis found
+    res.status(404).json({ message: 'No analysis found' });
   }
 };
