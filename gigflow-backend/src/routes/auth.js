@@ -28,4 +28,21 @@ router.post('/logout', authMiddleware, authController.logout);
 router.get('/me', authMiddleware, authController.getMe);
 router.put('/me', authMiddleware, authController.updateProfile);
 
+// Email verification
+router.post('/verify-email', authMiddleware, authController.verifyEmail);
+router.post('/resend-otp', authMiddleware, authController.resendOTP);
+
+// Forgot / Reset password
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail(),
+], validate, authController.forgotPassword);
+
+router.post('/reset-password', [
+  body('token').notEmpty(),
+  body('password').isLength({ min: 6 }),
+], validate, authController.resetPassword);
+
+// Google OAuth
+router.post('/google', authController.googleAuth);
+
 module.exports = router;

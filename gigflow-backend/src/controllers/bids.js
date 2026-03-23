@@ -1,12 +1,20 @@
 const pool = require('../config/db');
+const { sendNotificationEmail } = require('../utils/email');
 
-// Helper: notify user
+// Helper: notify user (in-app + email)
 async function notify(userId, type, title, message, data = {}) {
   try {
     await pool.query(
       'INSERT INTO notifications (user_id, type, title, message, data) VALUES ($1,$2,$3,$4,$5)',
       [userId, type, title, message, JSON.stringify(data)]
     );
+    // Send email notification (fire-and-forget)
+    pool.query('SELECT email, email_notifications FROM users WHERE id = $1', [userId])
+      .then(r => {
+        if (r.rows[0]?.email_notifications !== false) {
+          sendNotificationEmail(r.rows[0].email, title, message).catch(() => {});
+        }
+      }).catch(() => {});
   } catch (err) {
     console.error('Notification error:', err.message);
   }

@@ -104,7 +104,7 @@ export default function LoginPage() {
                   <input type="checkbox" className="w-4 h-4 rounded border-border" />
                   Remember me
                 </label>
-                <Link href="#" className="text-primary hover:underline">
+                <Link href="/auth/forgot-password" className="text-primary hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -114,8 +114,15 @@ export default function LoginPage() {
               </Button>
             </form>
 
+            {/* Google Sign-In */}
+            {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+              <div className="mt-6 pt-6 border-t border-border">
+                <div id="google-signin-login" className="flex justify-center" />
+              </div>
+            )}
+
             <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-center text-muted-foreground mb-4">Don't have an account?</p>
+              <p className="text-center text-muted-foreground mb-4">Don&apos;t have an account?</p>
               <Link href="/auth/signup">
                 <Button variant="outline" className="w-full bg-transparent">
                   Create Account

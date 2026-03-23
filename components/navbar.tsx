@@ -5,13 +5,32 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
-import { Menu, X, LayoutDashboard, LogOut, ChevronDown, MessageSquare, FileText, Users } from 'lucide-react';
+import { Menu, X, LayoutDashboard, LogOut, ChevronDown, MessageSquare, FileText, Users, Moon, Sun, Shield } from 'lucide-react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dark, setDark] = useState(false);
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
+
+  // Initialize dark mode from localStorage
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gf_dark');
+      if (saved === 'true') {
+        document.documentElement.classList.add('dark');
+        setDark(true);
+      }
+    }
+  });
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('gf_dark', String(next));
+  };
 
   const handleLogout = () => {
     logout();
@@ -19,7 +38,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/98 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/98 backdrop-blur-md">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
@@ -71,6 +90,9 @@ export default function Navbar() {
 
           {/* Desktop Auth */}
           <div className="hidden md:flex items-center gap-2">
+            <button onClick={toggleDark} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" aria-label="Toggle dark mode">
+              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             {!isLoading && (
               user ? (
                 <>
@@ -90,7 +112,7 @@ export default function Navbar() {
                       <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground ml-0.5 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {dropdownOpen && (
-                      <div className="absolute right-0 top-full mt-1.5 w-48 bg-white border border-border rounded-lg shadow-lg py-1.5 z-50">
+                      <div className="absolute right-0 top-full mt-1.5 w-48 bg-background border border-border rounded-lg shadow-lg py-1.5 z-50">
                         <Link href="/dashboard" className="flex items-center gap-2 px-3.5 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors">
                           <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
                         </Link>
@@ -100,6 +122,11 @@ export default function Navbar() {
                         {user.role === 'worker' && (
                           <Link href="/portfolio" className="flex items-center gap-2 px-3.5 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors">
                             <FileText className="w-3.5 h-3.5" /> Portfolio
+                          </Link>
+                        )}
+                        {user.role === 'admin' && (
+                          <Link href="/admin" className="flex items-center gap-2 px-3.5 py-2 text-sm text-primary hover:bg-primary/8 transition-colors">
+                            <Shield className="w-3.5 h-3.5" /> Admin Panel
                           </Link>
                         )}
                         <div className="h-px bg-border my-1.5" />
@@ -181,6 +208,9 @@ export default function Navbar() {
                 Referrals
               </Link>
             )}
+            <button onClick={toggleDark} className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/60 rounded-lg transition-colors">
+              {dark ? <><Sun className="w-4 h-4" /> Light Mode</> : <><Moon className="w-4 h-4" /> Dark Mode</>}
+            </button>
             <div className="flex gap-2 pt-3 pb-1 px-1">
               {user ? (
                 <>

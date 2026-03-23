@@ -18,9 +18,10 @@ exports.getAllGigs = async (req, res) => {
     params.push(status);
 
     if (search) {
-      conditions.push(`(g.title ILIKE $${idx} OR g.description ILIKE $${idx})`);
-      params.push(`%${search}%`);
-      idx++;
+      // Use full-text search if available, fallback to ILIKE
+      conditions.push(`(g.search_vector @@ plainto_tsquery('english', $${idx}) OR g.title ILIKE $${idx + 1})`);
+      params.push(search, `%${search}%`);
+      idx += 2;
     }
     if (category) { conditions.push(`g.category_id = $${idx++}`); params.push(category); }
     if (city) { conditions.push(`g.city ILIKE $${idx++}`); params.push(`%${city}%`); }

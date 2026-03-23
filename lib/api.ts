@@ -130,6 +130,18 @@ export const api = {
     updateProfile: (data: Partial<User> & { skills?: string[] }) =>
       request<{ message: string }>('/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
     logout: () => request<{ message: string }>('/auth/logout', { method: 'POST' }),
+    verifyEmail: (otp: string) =>
+      request<{ message: string }>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ otp }) }),
+    resendOTP: () =>
+      request<{ message: string }>('/auth/resend-otp', { method: 'POST' }),
+    forgotPassword: (email: string) =>
+      request<{ message: string }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    resetPassword: (token: string, password: string) =>
+      request<{ message: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
+    google: (credential: string) =>
+      request<{ token: string; refreshToken: string; user: User }>('/auth/google', {
+        method: 'POST', body: JSON.stringify({ credential }),
+      }),
   },
 
   // ── Gigs ────────────────────────────────────────────────────
@@ -274,6 +286,31 @@ export const api = {
     mySubmissions: () => request<TestSubmission[]>('/tests/my-submissions'),
   },
 
+  // ── Payments ──────────────────────────────────────────────────
+  payments: {
+    createOrder: (data: { gig_id?: number; amount: number; worker_id?: string; description?: string }) =>
+      request<{ orderId: string; amount: number; currency: string; key: string }>('/payments/create-order', {
+        method: 'POST', body: JSON.stringify(data),
+      }),
+    verify: (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
+      request<{ message: string }>('/payments/verify', { method: 'POST', body: JSON.stringify(data) }),
+    release: (payment_id: number) =>
+      request<{ message: string }>('/payments/release', { method: 'POST', body: JSON.stringify({ payment_id }) }),
+    mine: () => request<Payment[]>('/payments/mine'),
+  },
+
+  // ── File Upload ──────────────────────────────────────────────
+  upload: {
+    avatar: (file: string, fileName: string) =>
+      request<{ url: string; message: string }>('/upload/avatar', {
+        method: 'POST', body: JSON.stringify({ file, fileName }),
+      }),
+    portfolio: (file: string, fileName: string) =>
+      request<{ url: string; message: string }>('/upload/portfolio', {
+        method: 'POST', body: JSON.stringify({ file, fileName }),
+      }),
+  },
+
   // ── Bonus + Features 3,7,8: Candidates / Discover ──────────
   candidates: {
     discover: (params?: Record<string, string>) => {
@@ -309,6 +346,7 @@ export interface User {
   total_reviews?: number;
   total_jobs_completed?: number;
   is_verified?: boolean;
+  is_email_verified?: boolean;
   skills?: string[];
   // New fields
   is_discoverable?: boolean;
@@ -714,6 +752,25 @@ export interface TestSubmission {
   completed_at: string;
   gig_id?: number;
   gig_title?: string;
+}
+
+// ── Payments ─────────────────────────────────────────────────
+
+export interface Payment {
+  id: number;
+  gig_id?: number;
+  gig_title?: string;
+  employer_id?: string;
+  employer_name?: string;
+  worker_id?: string;
+  worker_name?: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'escrow' | 'released' | 'refunded' | 'failed';
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  description?: string;
+  created_at: string;
 }
 
 // ── Bonus + Features 3,7,8 ──────────────────────────────────
