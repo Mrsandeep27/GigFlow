@@ -56,12 +56,12 @@ export default function ResumeAnalyzerPage() {
 
   if (authLoading || !user) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
 
-  const handleAnalyze = async () => {
-    if (text.trim().length < 100) { setError('Please paste at least 100 characters of your resume.'); return; }
+  const runAnalysis = async (resumeText: string) => {
+    if (resumeText.trim().length < 100) { setError('Resume too short. Need at least 100 characters.'); return; }
     setError('');
     setLoading(true);
     try {
-      const result = await api.resume.analyze(text);
+      const result = await api.resume.analyze(resumeText);
       setAnalysis(result);
       setText('');
     } catch (err: unknown) {
@@ -79,9 +79,10 @@ export default function ResumeAnalyzerPage() {
 
     setUploading(true);
     setError('');
+    let extractedText = '';
     try {
       if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-        setText(await file.text());
+        extractedText = await file.text();
       } else if (file.name.endsWith('.docx')) {
         const arrayBuffer = await file.arrayBuffer();
         const JSZip = (await import('jszip')).default;
@@ -89,13 +90,10 @@ export default function ResumeAnalyzerPage() {
         const xmlFile = zip.file('word/document.xml');
         if (!xmlFile) throw new Error('Invalid .docx file');
         const xmlText = await xmlFile.async('text');
-        // Extract text between <w:t> tags (Word paragraph text nodes)
         const matches = xmlText.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
-        const plainText = matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ').replace(/\s+/g, ' ').trim();
-        if (!plainText) throw new Error('No text found in document');
-        setText(plainText);
+        extractedText = matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ').replace(/\s+/g, ' ').trim();
+        if (!extractedText) throw new Error('No text found in document');
       } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        // Load pdf.js from CDN (avoids Next.js bundling issues)
         await loadPdfJs();
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await (window as any).pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -106,16 +104,24 @@ export default function ResumeAnalyzerPage() {
           fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
         }
         if (!fullText.trim()) throw new Error('No text extracted from PDF');
-        setText(fullText.trim());
+        extractedText = fullText.trim();
       } else {
         setError('Unsupported file type. Upload PDF, DOCX, or TXT.');
+        return;
       }
     } catch (err: any) {
       console.error('File upload error:', err);
-      setError(err?.message || 'Failed to read file. Try pasting the text instead.');
+      setError(err?.message || 'Failed to read file.');
+      return;
     } finally {
       setUploading(false);
       e.target.value = '';
+    }
+
+    // Auto-analyze after extraction
+    if (extractedText) {
+      setText(extractedText);
+      runAnalysis(extractedText);
     }
   };
 
@@ -160,52 +166,59 @@ export default function ResumeAnalyzerPage() {
           </div>
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-primary/8 rounded-lg border border-primary/15">
             <Zap className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-semibold text-primary">Powered by Claude AI</span>
+            <span className="text-xs font-semibold text-primary">AI-Powered Analysis</span>
           </div>
         </div>
 
         {/* Input section */}
         {!checking && (
           <div className="bg-white border border-border rounded-xl p-6 mb-6">
-            <h2 className="font-semibold text-foreground mb-1">{analysis ? 'Analyze Again' : 'Paste Your Resume'}</h2>
-            <p className="text-xs text-muted-foreground mb-3">Upload a file or paste your resume text below.</p>
+            <h2 className="font-semibold text-foreground mb-1">{analysis ? 'Analyze Again' : 'Upload Your Resume'}</h2>
+            <p className="text-xs text-muted-foreground mb-3">Upload your resume file — analysis starts automatically.</p>
 
             {/* File upload */}
-            <label className="flex items-center justify-center gap-3 border-2 border-dashed border-border rounded-xl p-5 mb-4 cursor-pointer hover:border-primary/40 hover:bg-primary/[0.02] transition-all group">
-              <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload} className="hidden" />
-              {uploading ? (
+            <label className={`flex items-center justify-center gap-3 border-2 border-dashed rounded-xl p-6 cursor-pointer transition-all group ${loading ? 'border-primary/40 bg-primary/[0.03]' : 'border-border hover:border-primary/40 hover:bg-primary/[0.02]'}`}>
+              <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload} className="hidden" disabled={loading || uploading} />
+              {loading ? (
+                <><Loader2 className="w-5 h-5 animate-spin text-primary" /><span className="text-sm text-primary font-medium">Analyzing your resume...</span></>
+              ) : uploading ? (
                 <><Loader2 className="w-5 h-5 animate-spin text-primary" /><span className="text-sm text-primary font-medium">Reading file...</span></>
               ) : (
                 <>
                   <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                   <div>
                     <span className="text-sm font-medium text-foreground">Upload PDF, DOCX, or TXT</span>
-                    <span className="text-xs text-muted-foreground block">Max 5MB — text will be extracted automatically</span>
+                    <span className="text-xs text-muted-foreground block">Max 5MB — AI analysis starts instantly after upload</span>
                   </div>
                 </>
               )}
             </label>
 
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or paste text</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
+            {error && <p className="text-sm text-destructive mt-3">{error}</p>}
 
-            <textarea
-              className="w-full border border-border rounded-xl p-4 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-              rows={10}
-              placeholder="Paste your resume text here...&#10;&#10;Example:&#10;John Doe | john@email.com | +91 9876543210&#10;&#10;EXPERIENCE&#10;Senior Frontend Developer at Acme Corp (2021-2024)&#10;• Built React applications serving 100K+ users...&#10;&#10;SKILLS&#10;JavaScript, TypeScript, React, Node.js..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-            {error && <p className="text-sm text-destructive mt-2">{error}</p>}
-            <div className="flex items-center justify-between mt-4">
-              <span className="text-xs text-muted-foreground">{text.length} characters</span>
-              <Button onClick={handleAnalyze} disabled={loading || text.trim().length < 100} className="gap-1.5">
-                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Zap className="w-4 h-4" /> Analyze Resume</>}
-              </Button>
-            </div>
+            {/* Collapsible paste option */}
+            {!loading && (
+              <details className="mt-4">
+                <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none">
+                  Or paste text manually
+                </summary>
+                <div className="mt-3">
+                  <textarea
+                    className="w-full border border-border rounded-xl p-4 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                    rows={6}
+                    placeholder="Paste your resume text here..."
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                  />
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-muted-foreground">{text.length} characters</span>
+                    <Button size="sm" onClick={() => runAnalysis(text)} disabled={loading || text.trim().length < 100} className="gap-1.5">
+                      <Zap className="w-3.5 h-3.5" /> Analyze
+                    </Button>
+                  </div>
+                </div>
+              </details>
+            )}
           </div>
         )}
 
