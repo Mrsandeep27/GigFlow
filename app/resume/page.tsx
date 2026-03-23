@@ -10,6 +10,7 @@ import { api, ResumeAnalysis } from '@/lib/api';
 import {
   Loader2, ArrowLeft, Zap, CheckCircle2, XCircle,
   AlertCircle, TrendingUp, Star, Lightbulb, Code,
+  Upload, FileText,
 } from 'lucide-react';
 
 function ScoreRing({ score }: { score: number }) {
@@ -44,6 +45,7 @@ export default function ResumeAnalyzerPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
@@ -66,6 +68,54 @@ export default function ResumeAnalyzerPage() {
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) { setError('File too large. Max 5MB.'); return; }
+
+    setUploading(true);
+    setError('');
+    try {
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        const content = await file.text();
+        setText(content);
+      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        // Extract text from PDF using pdf.js CDN
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
+        }
+        setText(fullText.trim());
+      } else if (file.name.endsWith('.docx')) {
+        // Extract text from .docx (it's a zip of XML files)
+        const arrayBuffer = await file.arrayBuffer();
+        const JSZip = (await import('jszip')).default;
+        const zip = await JSZip.loadAsync(arrayBuffer);
+        const xmlFile = zip.file('word/document.xml');
+        if (!xmlFile) throw new Error('Invalid .docx file');
+        const xmlText = await xmlFile.async('text');
+        // Strip XML tags to get plain text
+        const plainText = xmlText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        setText(plainText);
+      } else {
+        setError('Unsupported file type. Please upload PDF, DOCX, or TXT.');
+      }
+    } catch (err) {
+      setError('Failed to read file. Try pasting the text instead.');
+      console.error('File upload error:', err);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -98,7 +148,30 @@ export default function ResumeAnalyzerPage() {
         {!checking && (
           <div className="bg-white border border-border rounded-xl p-6 mb-6">
             <h2 className="font-semibold text-foreground mb-1">{analysis ? 'Analyze Again' : 'Paste Your Resume'}</h2>
-            <p className="text-xs text-muted-foreground mb-4">Copy and paste your full resume text below. The more detail you include, the better the analysis.</p>
+            <p className="text-xs text-muted-foreground mb-3">Upload a file or paste your resume text below.</p>
+
+            {/* File upload */}
+            <label className="flex items-center justify-center gap-3 border-2 border-dashed border-border rounded-xl p-5 mb-4 cursor-pointer hover:border-primary/40 hover:bg-primary/[0.02] transition-all group">
+              <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload} className="hidden" />
+              {uploading ? (
+                <><Loader2 className="w-5 h-5 animate-spin text-primary" /><span className="text-sm text-primary font-medium">Reading file...</span></>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <div>
+                    <span className="text-sm font-medium text-foreground">Upload PDF, DOCX, or TXT</span>
+                    <span className="text-xs text-muted-foreground block">Max 5MB — text will be extracted automatically</span>
+                  </div>
+                </>
+              )}
+            </label>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or paste text</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
             <textarea
               className="w-full border border-border rounded-xl p-4 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
               rows={10}

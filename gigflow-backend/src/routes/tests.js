@@ -4,6 +4,7 @@ const ctrl = require('../controllers/tests');
 const auth = require('../middleware/auth');
 const { requireRole } = require('../middleware/auth');
 
+router.get('/', auth, ctrl.listTests);
 router.post('/', auth, requireRole('employer'), ctrl.createTest);
 router.get('/my-submissions', auth, requireRole('worker'), ctrl.mySubmissions);
 router.get('/gig/:gigId', ctrl.getTestForGig);

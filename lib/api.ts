@@ -160,6 +160,7 @@ export const api = {
 
   // ── Feature 6: Portfolio ────────────────────────────────────
   portfolio: {
+    mine: () => request<PortfolioItem[]>('/portfolio/mine'),
     forUser: (userId: string) => request<PortfolioItem[]>(`/portfolio/${userId}`),
     add: (data: Partial<PortfolioItem>) =>
       request<{ message: string; itemId: number }>('/portfolio', { method: 'POST', body: JSON.stringify(data) }),
@@ -196,6 +197,7 @@ export const api = {
 
   // ── Feature 10: Skill Tests ─────────────────────────────────
   tests: {
+    list: () => request<SkillTest[]>('/tests'),
     create: (data: CreateTestData) =>
       request<{ message: string; testId: number }>('/tests', { method: 'POST', body: JSON.stringify(data) }),
     forGig: (gigId: number) => request<SkillTest>(`/tests/gig/${gigId}`),

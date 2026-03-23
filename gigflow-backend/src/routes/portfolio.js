@@ -3,6 +3,7 @@ const router = express.Router();
 const ctrl = require('../controllers/portfolio');
 const auth = require('../middleware/auth');
 
+router.get('/mine', auth, ctrl.getMyPortfolio);
 router.get('/:userId', ctrl.getUserPortfolio);
 router.post('/', auth, ctrl.addItem);
 router.put('/:id', auth, ctrl.updateItem);

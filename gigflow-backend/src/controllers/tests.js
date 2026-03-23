@@ -1,5 +1,39 @@
 const pool = require('../config/db');
 
+// GET /api/tests — List tests (employer: their tests, worker: available tests)
+exports.listTests = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const role = req.user.role;
+    let result;
+    if (role === 'employer') {
+      result = await pool.query(
+        `SELECT t.id, t.gig_id, t.title, t.description, t.time_limit_minutes,
+                t.passing_score, t.is_active, t.created_at, g.title as gig_title,
+                (SELECT COUNT(*) FROM test_submissions ts WHERE ts.test_id = t.id) as submission_count
+         FROM skill_tests t
+         LEFT JOIN gigs g ON g.id = t.gig_id
+         WHERE g.created_by = $1
+         ORDER BY t.created_at DESC`,
+        [userId]
+      );
+    } else {
+      result = await pool.query(
+        `SELECT t.id, t.gig_id, t.title, t.description, t.time_limit_minutes,
+                t.passing_score, t.is_active, t.created_at, g.title as gig_title
+         FROM skill_tests t
+         LEFT JOIN gigs g ON g.id = t.gig_id
+         WHERE t.is_active = true
+         ORDER BY t.created_at DESC`
+      );
+    }
+    res.json(result.rows);
+  } catch (error) {
+    console.error('List tests error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // POST /api/tests — Create a skill test for a gig
 exports.createTest = async (req, res) => {
   try {

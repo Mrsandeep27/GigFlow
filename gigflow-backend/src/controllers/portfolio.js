@@ -1,5 +1,22 @@
 const pool = require('../config/db');
 
+// GET /api/portfolio/mine — Get current user's portfolio
+exports.getMyPortfolio = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, title, description, type, url, thumbnail_url, tags, order_num, created_at
+       FROM portfolio_items
+       WHERE user_id = $1
+       ORDER BY order_num ASC, created_at DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get my portfolio error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // GET /api/portfolio/:userId — Get user's portfolio
 exports.getUserPortfolio = async (req, res) => {
   try {
