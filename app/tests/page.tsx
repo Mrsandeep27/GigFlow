@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/navbar';
@@ -168,20 +168,103 @@ function CreateTestPanel({ onCreated }: { onCreated: (t: SkillTest) => void }) {
   );
 }
 
-/* ── Worker: Take Test ──────────────────────────────────────── */
+/* ── Worker: Take Test (with anti-cheat) ──────────────────── */
 function TakeTest({ test, onDone }: { test: SkillTest; onDone: () => void }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ score: number; passed: boolean; passing_score: number; message: string } | null>(null);
+  const [shuffledQuestions, setShuffledQuestions] = useState<TestQuestion[]>([]);
 
-  const handleSubmit = async () => {
+  // ── Anti-cheat state ──────────────────────────────────────
+  const [timeLeft, setTimeLeft] = useState((test.time_limit_minutes || 30) * 60);
+  const [tabSwitches, setTabSwitches] = useState(0);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const startTimeRef = useRef(Date.now());
+  const autoSubmittedRef = useRef(false);
+
+  // Shuffle questions + options on mount (each test taker gets different order)
+  useEffect(() => {
+    const qs = [...(test.questions ?? [])];
+    // Fisher-Yates shuffle questions
+    for (let i = qs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [qs[i], qs[j]] = [qs[j], qs[i]];
+    }
+    setShuffledQuestions(qs);
+  }, [test.questions]);
+
+  // Countdown timer — auto-submit when time runs out
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1 && !autoSubmittedRef.current) {
+          autoSubmittedRef.current = true;
+          handleSubmit(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Tab-switch detection
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setTabSwitches(prev => {
+          const next = prev + 1;
+          if (next === 1) setWarnings(w => [...w, 'Tab switch detected. This is recorded.']);
+          if (next === 3) setWarnings(w => [...w, 'Multiple tab switches! Your test may be flagged.']);
+          if (next >= 5 && !autoSubmittedRef.current) {
+            autoSubmittedRef.current = true;
+            setWarnings(w => [...w, 'Too many tab switches. Test auto-submitted.']);
+            handleSubmit(true);
+          }
+          return next;
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [answers]);
+
+  // Prevent copy/paste/right-click during test
+  useEffect(() => {
+    const block = (e: Event) => { e.preventDefault(); setWarnings(w => [...w, 'Copy/paste is disabled during the test.']); };
+    document.addEventListener('copy', block);
+    document.addEventListener('paste', block);
+    document.addEventListener('contextmenu', block);
+    return () => {
+      document.removeEventListener('copy', block);
+      document.removeEventListener('paste', block);
+      document.removeEventListener('contextmenu', block);
+    };
+  }, []);
+
+  const handleSubmit = async (auto = false) => {
+    if (submitting) return;
     setSubmitting(true);
+    const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000);
     try {
-      const res = await api.tests.submit(test.id, { answers });
-      setResult(res);
+      const res = await api.tests.submit(test.id, {
+        answers,
+        time_taken_seconds: timeTaken,
+        tab_switches: tabSwitches,
+        auto_submitted: auto,
+      } as any);
+      setResult({ ...res, tabSwitches, timeTaken, autoSubmitted: auto } as any);
     } catch {}
     setSubmitting(false);
   };
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+  const timeUrgent = timeLeft <= 60;
+  const timeLow = timeLeft <= 300 && !timeUrgent;
 
   if (result) {
     return (
@@ -208,18 +291,44 @@ function TakeTest({ test, onDone }: { test: SkillTest; onDone: () => void }) {
     );
   }
 
-  const questions = test.questions ?? [];
+  const questions = shuffledQuestions.length > 0 ? shuffledQuestions : (test.questions ?? []);
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-border rounded-xl p-5">
-        <h2 className="font-bold text-foreground text-lg mb-1">{test.title}</h2>
-        {test.description && <p className="text-sm text-muted-foreground mb-2">{test.description}</p>}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{test.duration_minutes} min</span>
-          <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5" />Pass at {test.passing_score}%</span>
-          <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" />{questions.length} questions</span>
+      {/* Sticky header with timer */}
+      <div className="bg-white border border-border rounded-xl p-5 sticky top-16 z-30 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="font-bold text-foreground text-lg mb-0.5">{test.title}</h2>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" />{questions.length} questions</span>
+              <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5" />Pass at {test.passing_score}%</span>
+            </div>
+          </div>
+          {/* Timer */}
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold text-lg ${
+            timeUrgent ? 'bg-destructive/10 text-destructive animate-pulse' :
+            timeLow ? 'bg-amber-50 text-amber-600' : 'bg-muted text-foreground'
+          }`}>
+            <Clock className="w-4 h-4" />
+            {formatTime(timeLeft)}
+          </div>
         </div>
+        {/* Anti-cheat warnings */}
+        {warnings.length > 0 && (
+          <div className="mt-3 space-y-1">
+            {warnings.slice(-2).map((w, i) => (
+              <div key={i} className="text-xs text-destructive bg-destructive/8 rounded px-3 py-1.5 flex items-center gap-1.5">
+                <AlertCircle className="w-3 h-3 shrink-0" />{w}
+              </div>
+            ))}
+          </div>
+        )}
+        {tabSwitches > 0 && (
+          <div className="mt-2 text-[10px] text-muted-foreground">
+            Tab switches: {tabSwitches}/5 — Employer will see this in your results
+          </div>
+        )}
       </div>
 
       {questions.map((q: TestQuestion, qi: number) => (
