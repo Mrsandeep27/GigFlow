@@ -74,50 +74,70 @@ export default function ResumeAnalyzerPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) { setError('File too large. Max 5MB.'); return; }
 
     setUploading(true);
     setError('');
     try {
       if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-        const content = await file.text();
-        setText(content);
-      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        // Extract text from PDF using pdf.js CDN
-        const arrayBuffer = await file.arrayBuffer();
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
-        }
-        setText(fullText.trim());
+        setText(await file.text());
       } else if (file.name.endsWith('.docx')) {
-        // Extract text from .docx (it's a zip of XML files)
         const arrayBuffer = await file.arrayBuffer();
         const JSZip = (await import('jszip')).default;
         const zip = await JSZip.loadAsync(arrayBuffer);
         const xmlFile = zip.file('word/document.xml');
         if (!xmlFile) throw new Error('Invalid .docx file');
         const xmlText = await xmlFile.async('text');
-        // Strip XML tags to get plain text
-        const plainText = xmlText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        // Extract text between <w:t> tags (Word paragraph text nodes)
+        const matches = xmlText.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
+        const plainText = matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ').replace(/\s+/g, ' ').trim();
+        if (!plainText) throw new Error('No text found in document');
         setText(plainText);
+      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        // Load pdf.js from CDN (avoids Next.js bundling issues)
+        await loadPdfJs();
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await (window as any).pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
+        }
+        if (!fullText.trim()) throw new Error('No text extracted from PDF');
+        setText(fullText.trim());
       } else {
-        setError('Unsupported file type. Please upload PDF, DOCX, or TXT.');
+        setError('Unsupported file type. Upload PDF, DOCX, or TXT.');
       }
-    } catch (err) {
-      setError('Failed to read file. Try pasting the text instead.');
+    } catch (err: any) {
       console.error('File upload error:', err);
+      setError(err?.message || 'Failed to read file. Try pasting the text instead.');
     } finally {
       setUploading(false);
       e.target.value = '';
     }
   };
+
+  // Load pdf.js from CDN to avoid Next.js bundling issues
+  function loadPdfJs(): Promise<void> {
+    if ((window as any).pdfjsLib) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
+      script.type = 'module';
+      // Fallback: use non-module version
+      const scriptFallback = document.createElement('script');
+      scriptFallback.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      scriptFallback.onload = () => {
+        (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      scriptFallback.onerror = () => reject(new Error('Failed to load PDF parser'));
+      document.head.appendChild(scriptFallback);
+    });
+  }
 
   const levelColor = (l: string) => ({ junior: 'text-blue-500', mid: 'text-indigo-500', senior: 'text-emerald-500', lead: 'text-amber-500' }[l] || 'text-muted-foreground');
 
